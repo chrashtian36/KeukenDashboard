@@ -451,12 +451,13 @@ const DEFAULTS = {
   ntfy:     'keuken-chrashdash',
   hueIp:    '192.168.1.29',
   hueToken: 'zWIxvCKj4OD-BHxUX32O5PVhfuaigmVTp45SJzMG',
-  ical:     ''
+  ical:     'https://calendar.google.com/calendar/ical/rademakerpetera%40gmail.com/private-f99d0d51ffcb44129f8ee2a6ee3e901a/basic.ics,https://calendar.google.com/calendar/ical/5iqoeqeoho2oviud5p6n3q721qkim5p1%40import.calendar.google.com/public/basic.ics'
 };
 
 const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-// Samenvoegen: opgeslagen waarden hebben voorrang, anders fallback
-let cfg = Object.assign({}, DEFAULTS, saved);
+// Samenvoegen: opgeslagen waarden hebben voorrang, maar lege waarden tellen niet
+let cfg = Object.assign({}, DEFAULTS);
+Object.keys(saved).forEach(k => { if (saved[k]) cfg[k] = saved[k]; });
 
 function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 // Meteen opslaan zodat het zeker staat
@@ -680,10 +681,9 @@ function updateSliderGrad(id, pct) {
 }
 function openGH(e) {
   e.preventDefault();
-  // Probeer de Google Home app te openen via deep link
-  // Als de app niet geïnstalleerd is valt hij terug op de website
-  window.location.href = 'googlegmail://'; // trigger app-switch
-  setTimeout(() => { window.location.href = 'https://home.google.com'; }, 500);
+  // Opent Google Home app op iOS als geïnstalleerd, anders website
+  window.location.href = 'googlehome://';
+  setTimeout(() => { window.open('https://home.google.com', '_blank'); }, 500);
 }
 setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
 
