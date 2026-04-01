@@ -313,12 +313,13 @@
 
   /* config */
   #config-btn {
-    position: fixed; bottom: 14px; right: 14px;
-    width: 36px; height: 36px; border-radius: 50%;
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--muted); font-size: 17px;
+    position: fixed; top: 18px; right: 18px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(30,35,53,0.85); border: 1px solid var(--border);
+    color: var(--muted); font-size: 15px;
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; z-index: 100;
+    backdrop-filter: blur(8px);
   }
   #config-panel {
     display: none; position: fixed; inset: 0;
@@ -677,7 +678,13 @@ function updateSliderGrad(id, pct) {
   const s = document.querySelector(`#light-${id} .dim-slider`);
   if (s) s.style.setProperty('--pct', pct+'%');
 }
-function openGH(e) { e.preventDefault(); window.location.href='https://home.google.com'; }
+function openGH(e) {
+  e.preventDefault();
+  // Probeer de Google Home app te openen via deep link
+  // Als de app niet geïnstalleerd is valt hij terug op de website
+  window.location.href = 'googlegmail://'; // trigger app-switch
+  setTimeout(() => { window.location.href = 'https://home.google.com'; }, 500);
+}
 setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
 
 // ─── MELDINGEN (ticker) ─────────────────────────────────────────────
@@ -791,15 +798,25 @@ async function loadAgenda() {
     // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
     const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
 
-    // Haal alle agenda's parallel op
+    // Haal alle agenda's parallel op — probeer twee proxies
     const allEvents = [];
     await Promise.all(urls.map(async icalUrl => {
       try {
-        const sep = icalUrl.includes('?') ? '&' : '?';
-        const url = icalUrl + sep + '_t=' + Date.now();
-        const r   = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(url), { cache: 'no-store' });
-        if (!r.ok) return;
-        const events = parseIcal(await r.text());
+        const bust = (icalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        const encoded = encodeURIComponent(icalUrl + bust);
+        // Probeer eerst allorigins, dan corsproxy als fallback
+        let text = null;
+        for (const proxy of [
+          `https://api.allorigins.win/raw?url=${encoded}`,
+          `https://corsproxy.io/?url=${encoded}`
+        ]) {
+          try {
+            const r = await fetch(proxy, { cache: 'no-store' });
+            if (r.ok) { text = await r.text(); break; }
+          } catch(e) {}
+        }
+        if (!text) return;
+        const events = parseIcal(text);
         allEvents.push(...events);
       } catch(e) {}
     }));
