@@ -443,13 +443,23 @@
 <script>
 // ─── CONFIG ─────────────────────────────────────────────────────────
 const CFG_KEY = 'dashboard_cfg';
-let cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
-// Alleen defaults zetten als er nog niets is — nooit bestaande waarden overschrijven
-if (!cfg.ntfy) cfg.ntfy = 'keuken-chrashdash';
-if (!cfg.city) cfg.city = 'Schiedam';
-// Niet automatisch opslaan — alleen opslaan als gebruiker iets wijzigt
+
+// Vaste fallback-waarden — worden gebruikt als localStorage leeg is
+const DEFAULTS = {
+  city:     'Schiedam',
+  ntfy:     'keuken-chrashdash',
+  hueIp:    '192.168.1.29',
+  hueToken: 'zWIxvCKj4OD-BHxUX32O5PVhfuaigmVTp45SJzMG',
+  ical:     ''
+};
+
+const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+// Samenvoegen: opgeslagen waarden hebben voorrang, anders fallback
+let cfg = Object.assign({}, DEFAULTS, saved);
 
 function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+// Meteen opslaan zodat het zeker staat
+saveLocalCfg();
 
 function openConfig() {
   document.getElementById('cfg-city').value      = cfg.city     || '';
