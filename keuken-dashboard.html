@@ -286,10 +286,19 @@
   }
   #hue-status { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); }
   #gh-link {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(66,133,244,0.1); border: 1px solid rgba(66,133,244,0.25);
-    border-radius: 8px; color: #8ab4f8; font-size: 12px; padding: 6px 12px;
-    cursor: pointer; text-decoration: none; -webkit-tap-highlight-color: transparent;
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, rgba(66,133,244,0.18), rgba(66,133,244,0.08));
+    border: 1px solid rgba(66,133,244,0.35);
+    border-radius: 10px; color: #8ab4f8;
+    font-size: 15px; font-weight: 500;
+    padding: 10px 18px;
+    cursor: pointer; text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  #gh-link:active {
+    background: rgba(66,133,244,0.25);
+    border-color: rgba(66,133,244,0.6);
   }
 
   #msg-list::-webkit-scrollbar { width: 3px; }
@@ -383,7 +392,9 @@
     <div id="lights-grid"></div>
     <div id="lights-footer">
       <span id="hue-status">Hue: stel in via ⚙️</span>
-      <a id="gh-link" href="#" onclick="openGH(event)">⬡ Calex via Google Home</a>
+      <a id="gh-link" href="https://home.google.com" target="_blank" onclick="openGH(event)">
+        🏠 Andere lampen (Google Home)
+      </a>
     </div>
   </div>
 
@@ -543,7 +554,7 @@ function buildRadar(hourly) {
 let hueGroups   = [];
 let hueConnected = false;
 
-function hueBase() { return `http://${cfg.hueIp}/api/${cfg.hueToken}`; }
+function hueBase() { return `https://${cfg.hueIp}/api/${cfg.hueToken}`; }
 
 function setHueStatus(msg, ok) {
   const el = document.getElementById('hue-status');
@@ -689,7 +700,7 @@ function updateSliderGrad(id, pct) {
 }
 function openGH(e) {
   e.preventDefault();
-  setTimeout(() => { window.location.href = 'https://home.google.com'; }, 100);
+  window.location.href = 'https://home.google.com';
 }
 setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
 
