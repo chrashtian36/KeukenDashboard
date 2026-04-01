@@ -35,18 +35,15 @@
     -webkit-text-size-adjust: 100%;
   }
 
-  /* ── GRID LAYOUT ──
-     Kolommen: [agenda] [lichten]
-     Rijen: [klok+weer] [radar] [agenda+lichten] [meldingen-balk]
-  */
+  /* ── GRID LAYOUT ── */
   #app {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    grid-template-rows: auto auto 1fr 48px;
-    gap: 10px;
-    padding: 10px;
+    grid-template-rows: auto auto 1fr 50px;
+    gap: 8px;
+    padding: 8px;
     height: 100vh;
-    max-height: 100vh;
+    height: 100dvh; /* iOS dynamic viewport */
   }
 
   .card {
@@ -148,9 +145,9 @@
   .a-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .a-time { font-family: 'DM Mono', monospace; font-size: 14px; color: #b0b8cc; min-width: 50px; flex-shrink: 0; font-weight: 400; }
   .a-title { font-size: 16px; font-weight: 500; color: #fff; line-height: 1.25; }
-  .agenda-item.past .a-title { color: #6a7490; font-weight: 400; text-decoration: line-through; text-decoration-color: #444c66; }
-  .agenda-item.past .a-time { color: #4a5270; }
-  .agenda-item.past .a-dot { opacity: 0.3; }
+  .agenda-item.past .a-title { color: #5a6380; text-decoration: line-through; text-decoration-color: #3a4060; }
+  .agenda-item.past .a-time  { color: #3e4860; }
+  .agenda-item.past .a-dot   { opacity: 0.2; }
   .a-now {
     background: rgba(79,142,247,0.1);
     border-left: 3px solid var(--accent);
@@ -241,11 +238,13 @@
     background: linear-gradient(135deg, #111828 0%, #141820 100%);
     border: 1px solid rgba(79,142,247,0.15);
     border-radius: var(--radius);
-    padding: 0 16px;
+    padding: 0 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    height: 48px;
+    gap: 10px;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
     overflow: hidden;
   }
   #msg-bar-label {
@@ -372,7 +371,7 @@
   <!-- RADAR -->
   <div class="card" id="radar-card">
     <div style="display:flex;align-items:center;justify-content:space-between">
-      <div class="label" style="margin-bottom:0;color:var(--rain)">Neerslag komend uur</div>
+      <div class="label" style="margin-bottom:0;color:var(--rain)" id="radar-label">Neerslag komend uur</div>
       <div id="radar-status">laden…</div>
     </div>
     <div id="radar-inner"></div>
@@ -506,7 +505,9 @@ async function loadWeather() {
     const geo  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=nl&format=json`);
     const gd   = await geo.json();
     if (!gd.results?.length) return;
-    const { latitude: lat, longitude: lon } = gd.results[0];
+    const { latitude: lat, longitude: lon, name: cityName } = gd.results[0];
+    const lbl = document.getElementById('radar-label');
+    if (lbl) lbl.textContent = `Neerslag komend uur · ${cityName}`;
     const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&timezone=Europe%2FAmsterdam&forecast_days=1`);
     const d = await r.json();
     const c = d.current, code = c.weathercode;
