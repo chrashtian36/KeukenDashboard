@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Keuken">
 <title>Keuken Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
@@ -39,7 +42,7 @@
   #app {
     display: grid;
     grid-template-columns: 1.2fr 1fr;
-    grid-template-rows: auto auto 1fr auto;
+    grid-template-rows: auto auto 1fr 48px;
     gap: 10px;
     padding: 10px;
     height: 100vh;
@@ -145,6 +148,9 @@
   .a-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .a-time { font-family: 'DM Mono', monospace; font-size: 14px; color: #b0b8cc; min-width: 50px; flex-shrink: 0; font-weight: 400; }
   .a-title { font-size: 16px; font-weight: 500; color: #fff; line-height: 1.25; }
+  .agenda-item.past .a-title { color: #6a7490; font-weight: 400; text-decoration: line-through; text-decoration-color: #444c66; }
+  .agenda-item.past .a-time { color: #4a5270; }
+  .agenda-item.past .a-dot { opacity: 0.3; }
   .a-now {
     background: rgba(79,142,247,0.1);
     border-left: 3px solid var(--accent);
@@ -239,7 +245,7 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    height: 46px;
+    height: 48px;
     overflow: hidden;
   }
   #msg-bar-label {
@@ -439,9 +445,10 @@
 // ─── CONFIG ─────────────────────────────────────────────────────────
 const CFG_KEY = 'dashboard_cfg';
 let cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+// Alleen defaults zetten als er nog niets is — nooit bestaande waarden overschrijven
 if (!cfg.ntfy) cfg.ntfy = 'keuken-chrashdash';
 if (!cfg.city) cfg.city = 'Schiedam';
-saveLocalCfg();
+// Niet automatisch opslaan — alleen opslaan als gebruiker iets wijzigt
 
 function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 
@@ -807,8 +814,7 @@ async function loadAgenda() {
         const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
         const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
         const div = document.createElement('div');
-        div.className = 'agenda-item'+(isNow?' a-now':'');
-        div.style.opacity = isPast?'0.38':'1';
+        div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'');
         div.innerHTML=`
           <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
           <div class="a-time">${timeStr}</div>
