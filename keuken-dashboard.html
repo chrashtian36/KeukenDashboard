@@ -420,8 +420,8 @@
       <input id="cfg-city" type="text" placeholder="Schiedam" />
     </div>
     <div class="cfg-row">
-      <label>Google Agenda iCal URL</label>
-      <input id="cfg-ical" type="text" placeholder="https://calendar.google.com/calendar/ical/…" />
+      <label>Google Agenda iCal URL(s) — meerdere met komma scheiden</label>
+      <input id="cfg-ical" type="text" placeholder="https://…ical…, https://…ical…" />
     </div>
     <div class="cfg-row">
       <label>ntfy kanaal</label>
@@ -788,11 +788,24 @@ async function loadAgenda() {
   }
   list.innerHTML='<div class="no-msg">Laden…</div>';
   try {
-    const sep = cfg.ical.includes('?')?'&':'?';
-    const url = cfg.ical+sep+'_t='+Date.now();
-    const r   = await fetch('https://corsproxy.io/?url='+encodeURIComponent(url), { cache:'no-store' });
-    if (!r.ok) throw new Error();
-    const allEvents = parseIcal(await r.text());
+    // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
+    const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
+
+    // Haal alle agenda's parallel op
+    const allEvents = [];
+    await Promise.all(urls.map(async icalUrl => {
+      try {
+        const sep = icalUrl.includes('?') ? '&' : '?';
+        const url = icalUrl + sep + '_t=' + Date.now();
+        const r   = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(url), { cache: 'no-store' });
+        if (!r.ok) return;
+        const events = parseIcal(await r.text());
+        allEvents.push(...events);
+      } catch(e) {}
+    }));
+
+    // Sorteer alle events over alle agenda's samen
+    allEvents.sort((a, b) => a.start - b.start);
 
     const now      = new Date();
     const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
