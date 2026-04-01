@@ -443,9 +443,12 @@
   <div class="card" id="lights-card">
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
       <div class="label" style="margin-bottom:0">Verlichting</div>
-      <a id="gh-link" href="googlegmail://" onclick="openGH(event)">
-        ⬡ Open Google Home
-      </a>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="hue-status" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">Hue: niet gekoppeld</span>
+        <a id="gh-link" href="#" onclick="openGH(event)" style="display:flex;align-items:center;gap:6px;background:rgba(66,133,244,0.1);border:0.5px solid rgba(66,133,244,0.3);border-radius:8px;color:#8ab4f8;font-size:12px;padding:5px 10px;text-decoration:none;">
+          ⬡ Calex via Google Home
+        </a>
+      </div>
     </div>
     <div id="lights-grid"></div>
   </div>
@@ -475,6 +478,14 @@
       <label>Locatie (stad voor weer)</label>
       <input id="cfg-city" type="text" placeholder="Schiedam" />
     </div>
+    <div class="cfg-row">
+      <label>Philips Hue Bridge IP</label>
+      <input id="cfg-hue-ip" type="text" placeholder="bijv. 192.168.1.42" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue API Token</label>
+      <input id="cfg-hue-token" type="text" placeholder="lange token uit /debug/clip.html" />
+    </div>
     <button class="cfg-save" onclick="saveConfig()">Opslaan & herladen</button>
     <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
   </div>
@@ -492,18 +503,22 @@ saveLocalCfg();
 function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 
 function openConfig() {
-  document.getElementById('cfg-ntfy').value   = cfg.ntfy || '';
-  document.getElementById('cfg-ical').value   = cfg.ical || '';
-  document.getElementById('cfg-lights').value = cfg.lights || '';
-  document.getElementById('cfg-city').value   = cfg.city || '';
+  document.getElementById('cfg-ntfy').value      = cfg.ntfy || '';
+  document.getElementById('cfg-ical').value      = cfg.ical || '';
+  document.getElementById('cfg-lights').value    = cfg.lights || '';
+  document.getElementById('cfg-city').value      = cfg.city || '';
+  document.getElementById('cfg-hue-ip').value    = cfg.hueIp || '';
+  document.getElementById('cfg-hue-token').value = cfg.hueToken || '';
   document.getElementById('config-panel').classList.add('open');
 }
 function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
 function saveConfig() {
-  cfg.ntfy   = document.getElementById('cfg-ntfy').value.trim();
-  cfg.ical   = document.getElementById('cfg-ical').value.trim();
-  cfg.lights = document.getElementById('cfg-lights').value.trim();
-  cfg.city   = document.getElementById('cfg-city').value.trim();
+  cfg.ntfy      = document.getElementById('cfg-ntfy').value.trim();
+  cfg.ical      = document.getElementById('cfg-ical').value.trim();
+  cfg.lights    = document.getElementById('cfg-lights').value.trim();
+  cfg.city      = document.getElementById('cfg-city').value.trim();
+  cfg.hueIp     = document.getElementById('cfg-hue-ip').value.trim();
+  cfg.hueToken  = document.getElementById('cfg-hue-token').value.trim();
   saveLocalCfg();
   closeConfig();
   initAll();
@@ -608,10 +623,145 @@ function buildRadar(hourly, lat, lon) {
   document.getElementById('radar-status').style.color = anyRain ? 'var(--rain)' : 'var(--accent2)';
 }
 
-// ─── LICHTEN ────────────────────────────────────────────────────────
-let lightStates = {};
+// ─── LICHTEN (Philips Hue API) ──────────────────────────────────────
+let hueGroups = [];      // [{id, name, on, bri}]
+let hueConnected = false;
 
-function buildLights() {
+function hueBase() {
+  return `http://${cfg.hueIp}/api/${cfg.hueToken}`;
+}
+
+function setHueStatus(msg, ok) {
+  const el = document.getElementById('hue-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--accent2)' : 'var(--muted)';
+}
+
+async function loadHueLights() {
+  if (!cfg.hueIp || !cfg.hueToken) {
+    setHueStatus('Hue: stel in via ⚙️', false);
+    buildLightsFallback();
+    return;
+  }
+  try {
+    const r = await fetch(`${hueBase()}/groups`);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const data = await r.json();
+
+    hueGroups = Object.entries(data)
+      .filter(([, g]) => g.type === 'Room' || g.type === 'Zone' || g.type === 'LightGroup')
+      .map(([id, g]) => ({
+        id,
+        name: g.name,
+        on:   g.action.on,
+        bri:  g.action.bri != null ? Math.round(g.action.bri / 2.54) : 100,
+        type: 'group'
+      }));
+
+    // If no groups, fall back to individual lights
+    if (!hueGroups.length) {
+      const lr = await fetch(`${hueBase()}/lights`);
+      const ld = await lr.json();
+      hueGroups = Object.entries(ld).map(([id, l]) => ({
+        id,
+        name: l.name,
+        on:   l.state.on,
+        bri:  Math.round(l.state.bri / 2.54),
+        type: 'light'
+      }));
+    }
+
+    hueConnected = true;
+    setHueStatus(`Hue ✓ · ${hueGroups.length} kamers`, true);
+    buildLightsHue();
+  } catch(e) {
+    hueConnected = false;
+    setHueStatus('Hue: geen verbinding', false);
+    buildLightsFallback();
+  }
+}
+
+function buildLightsHue() {
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  const cols = Math.min(Math.max(hueGroups.length, 1), 6);
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  hueGroups.forEach(group => {
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (group.on ? ' on' : '');
+    unit.id = 'light-' + group.id;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${group.name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${group.bri}" step="1"
+          oninput="onHueDim('${group.id}','${group.type}',this)"
+          onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${group.id}">${group.bri}%</div>
+      </div>`;
+    unit.addEventListener('click', () => toggleHueLight(group.id, group.type));
+    unit.addEventListener('touchend', (e) => { e.preventDefault(); toggleHueLight(group.id, group.type); });
+    grid.appendChild(unit);
+    updateSliderGrad(group.id, group.bri);
+  });
+}
+
+async function toggleHueLight(id, type) {
+  const group = hueGroups.find(g => g.id === id);
+  if (!group) return;
+  const newOn = !group.on;
+  group.on = newOn;
+
+  // Optimistic UI update
+  const unit = document.getElementById('light-' + id);
+  if (unit) unit.classList.toggle('on', newOn);
+
+  // Send to Hue
+  try {
+    const endpoint = type === 'group'
+      ? `${hueBase()}/groups/${id}/action`
+      : `${hueBase()}/lights/${id}/state`;
+    await fetch(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ on: newOn })
+    });
+  } catch(e) {
+    // Revert on failure
+    group.on = !newOn;
+    if (unit) unit.classList.toggle('on', !newOn);
+  }
+}
+
+async function onHueDim(id, type, slider) {
+  const pct = parseInt(slider.value);
+  const group = hueGroups.find(g => g.id === id);
+  if (group) group.bri = pct;
+  const el = document.getElementById('pct-' + id);
+  if (el) el.textContent = pct + '%';
+  updateSliderGrad(id, pct);
+
+  // Convert 0-100 to Hue 1-254
+  const bri = Math.max(1, Math.round(pct * 2.54));
+  try {
+    const endpoint = type === 'group'
+      ? `${hueBase()}/groups/${id}/action`
+      : `${hueBase()}/lights/${id}/state`;
+    await fetch(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ on: true, bri })
+    });
+    // Mark as on when dimming
+    if (group) group.on = true;
+    const unit = document.getElementById('light-' + id);
+    if (unit) unit.classList.add('on');
+  } catch(e) {}
+}
+
+// Fallback: visuele-only modus als Hue niet gekoppeld is
+let lightStates = {};
+function buildLightsFallback() {
   const names = (cfg.lights || 'Keuken,Woonkamer,Slaapkamer,Hal,Buiten').split(',').map(s=>s.trim()).filter(Boolean);
   const grid = document.getElementById('lights-grid');
   grid.innerHTML = '';
@@ -620,45 +770,37 @@ function buildLights() {
   names.forEach(name => {
     if (!lightStates[name]) lightStates[name] = { on: false, pct: 80 };
     const st = lightStates[name];
-
     const unit = document.createElement('div');
     unit.className = 'light-unit' + (st.on ? ' on' : '');
     unit.id = 'light-' + name;
-
     unit.innerHTML = `
       <div class="bulb-icon">💡</div>
       <div class="light-name">${name}</div>
       <div class="slider-row">
         <input type="range" class="dim-slider" min="1" max="100" value="${st.pct}" step="1"
-          oninput="onDim('${name}',this)" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+          oninput="onDimFallback('${name}',this)" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
         <div class="dim-pct" id="pct-${name}">${st.pct}%</div>
       </div>`;
-
-    unit.addEventListener('click', () => toggleLight(name));
-    unit.addEventListener('touchend', (e) => { e.preventDefault(); toggleLight(name); });
+    unit.addEventListener('click', () => { lightStates[name].on = !lightStates[name].on; unit.classList.toggle('on', lightStates[name].on); });
+    unit.addEventListener('touchend', (e) => { e.preventDefault(); lightStates[name].on = !lightStates[name].on; unit.classList.toggle('on', lightStates[name].on); });
     grid.appendChild(unit);
-
     updateSliderGrad(name, st.pct);
   });
 }
 
-function toggleLight(name) {
-  if (!lightStates[name]) lightStates[name] = { on: false, pct: 80 };
-  lightStates[name].on = !lightStates[name].on;
-  const unit = document.getElementById('light-'+name);
-  if (unit) unit.classList.toggle('on', lightStates[name].on);
-  // Try Google Home deep link (works when GH app installed)
-  // No-op if not installed — user controls via GH app separately
-}
-
-function onDim(name, slider) {
+function onDimFallback(name, slider) {
   const pct = parseInt(slider.value);
   if (!lightStates[name]) lightStates[name] = { on: true, pct: 80 };
   lightStates[name].pct = pct;
-  const el = document.getElementById('pct-'+name);
-  if (el) el.textContent = pct+'%';
+  const el = document.getElementById('pct-' + name);
+  if (el) el.textContent = pct + '%';
   updateSliderGrad(name, pct);
 }
+
+function buildLights() { loadHueLights(); }
+
+function toggleLight(name) {}   // legacy stub
+function onDim(name, slider) {} // legacy stub
 
 function updateSliderGrad(name, pct) {
   const slider = document.querySelector(`#light-${name} .dim-slider`);
@@ -667,12 +809,15 @@ function updateSliderGrad(name, pct) {
 
 function openGH(e) {
   e.preventDefault();
-  window.location.href = 'googlegmail://'; // placeholder
+  window.location.href = 'googlegmail://';
   setTimeout(() => { window.location.href = 'https://home.google.com'; }, 300);
 }
 
+// Poll Hue every 30s to stay in sync
+setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
+
 // ─── NTFY MELDINGEN ─────────────────────────────────────────────────
-let messages = [];
+let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
 let ntfyES = null;
 
 function updateNtfyInfo() {
@@ -683,7 +828,12 @@ function updateNtfyInfo() {
 
 function clearMessages() {
   messages = [];
+  localStorage.removeItem('dashboard_msgs');
   renderMessages();
+}
+
+function saveMessages() {
+  localStorage.setItem('dashboard_msgs', JSON.stringify(messages.slice(-20)));
 }
 
 function renderMessages() {
@@ -705,6 +855,7 @@ function startNtfy() {
   if (ntfyES) { try { ntfyES.close(); } catch(e){} }
   if (!cfg.ntfy) return;
   updateNtfyInfo();
+  renderMessages(); // toon opgeslagen meldingen meteen
 
   try {
     ntfyES = new EventSource(`https://ntfy.sh/${cfg.ntfy}/sse`);
@@ -715,6 +866,7 @@ function startNtfy() {
           const now = new Date();
           messages.push({ text: data.message, time: pad(now.getHours())+':'+pad(now.getMinutes()) });
           if (messages.length > 20) messages.shift();
+          saveMessages();
           renderMessages();
         }
       } catch(err) {}
@@ -771,20 +923,23 @@ async function loadAgenda() {
   }
 
   try {
-    // Use a CORS proxy since iCal is cross-origin
+    // Cache-busting timestamp voorkomt dat corsproxy oude data geeft
+    const bust = '&_cb=' + Date.now();
     const proxy = 'https://corsproxy.io/?';
-    const r = await fetch(proxy + encodeURIComponent(cfg.ical));
+    const r = await fetch(proxy + encodeURIComponent(cfg.ical + bust), { cache: 'no-store' });
     if (!r.ok) throw new Error('fetch failed');
     const text = await r.text();
     const events = parseIcal(text);
     const now = new Date();
+
+    // Altijd eerst leegmaken voor correcte refresh
+    list.innerHTML = '';
 
     if (!events.length) {
       list.innerHTML = '<div class="no-msg">Geen afspraken vandaag</div>';
       return;
     }
 
-    list.innerHTML = '';
     events.forEach((ev, i) => {
       const isPast = !ev.allDay && ev.start < now;
       const isNow = !ev.allDay && Math.abs(ev.start - now) < 30*60*1000;
