@@ -145,6 +145,7 @@
   .a-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .a-time { font-family: 'DM Mono', monospace; font-size: 14px; color: #b0b8cc; min-width: 50px; flex-shrink: 0; font-weight: 400; }
   .a-title { font-size: 16px; font-weight: 500; color: #fff; line-height: 1.25; }
+  .a-subtitle { font-size: 12px; color: var(--accent2); margin-top: 2px; font-weight: 400; }
   .agenda-item.past .a-title { color: #5a6380; text-decoration: line-through; text-decoration-color: #3a4060; }
   .agenda-item.past .a-time  { color: #3e4860; }
   .agenda-item.past .a-dot   { opacity: 0.2; }
@@ -783,6 +784,46 @@ function parseIcal(text) {
   return events.sort((a,b) => a.start-b.start);
 }
 
+function groupNachtdiensten(events) {
+  const isDienst = e => e.summary === 'Dienst' && e.start.getHours() >= 21;
+  const diensten = events.filter(isDienst);
+  const overig = events.filter(e => !isDienst(e));
+  if (!diensten.length) return events;
+
+  diensten.sort((a, b) => a.start - b.start);
+
+  const blocks = [];
+  let block = [diensten[0]];
+  for (let i = 1; i < diensten.length; i++) {
+    const prevD = new Date(block[block.length-1].start.getFullYear(), block[block.length-1].start.getMonth(), block[block.length-1].start.getDate());
+    const currD = new Date(diensten[i].start.getFullYear(), diensten[i].start.getMonth(), diensten[i].start.getDate());
+    if (Math.round((currD - prevD) / 86400000) === 1) {
+      block.push(diensten[i]);
+    } else {
+      blocks.push(block);
+      block = [diensten[i]];
+    }
+  }
+  blocks.push(block);
+
+  blocks.forEach(b => {
+    const first = b[0].start;
+    const last = b[b.length - 1].start;
+    const uitDag = new Date(last.getFullYear(), last.getMonth(), last.getDate() + 1);
+    const fd = DAYS_SHORT[first.getDay()], ld = DAYS_SHORT[last.getDay()];
+    const ud = DAYS_SHORT[uitDag.getDay()];
+
+    const summary = b.length === 1
+      ? '\u{1F319} Nachtdienst ' + fd
+      : '\u{1F319} Nachtdienst ' + fd + '\u2013' + ld;
+    const subtitle = 'uit: ' + ud + ' ' + uitDag.getDate() + ' ' + MONTHS_SHORT[uitDag.getMonth()] + ' ochtend';
+
+    overig.push({ summary, subtitle, start: first, allDay: false });
+  });
+
+  return overig.sort((a, b) => a.start - b.start);
+}
+
 function dayKey(d) { return d.getFullYear()*10000+d.getMonth()*100+d.getDate(); }
 
 function formatDayLabel(date) {
@@ -839,14 +880,15 @@ async function loadAgenda() {
       } catch(e) {}
     }));
 
-    // Sorteer alle events over alle agenda's samen
-    allEvents.sort((a, b) => a.start - b.start);
+    // Groepeer nachtdiensten tot blokken en sorteer
+    const grouped = groupNachtdiensten(allEvents);
+    grouped.sort((a, b) => a.start - b.start);
 
     const now      = new Date();
     const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+14);
 
-    const upcoming = allEvents.filter(ev => {
+    const upcoming = grouped.filter(ev => {
       const d = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
       return d >= todayMid && d <= cutoff;
     });
@@ -877,7 +919,7 @@ async function loadAgenda() {
         div.innerHTML=`
           <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
           <div class="a-time">${timeStr}</div>
-          <div class="a-title">${ev.summary}</div>`;
+          <div><div class="a-title">${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
         list.appendChild(div);
       });
     });
