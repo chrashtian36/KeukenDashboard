@@ -818,7 +818,7 @@ function groupNachtdiensten(events) {
       : '\u{1F319} Nachtdienst ' + fd + '\u2013' + ld;
     const subtitle = 'uit: ' + ud + ' ' + uitDag.getDate() + ' ' + MONTHS_SHORT[uitDag.getMonth()] + ' ochtend';
 
-    overig.push({ summary, subtitle, start: first, allDay: false });
+    overig.push({ summary, subtitle, start: first, end: uitDag, allDay: false });
   });
 
   return overig.sort((a, b) => a.start - b.start);
@@ -890,7 +890,8 @@ async function loadAgenda() {
 
     const upcoming = grouped.filter(ev => {
       const d = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
-      return d >= todayMid && d <= cutoff;
+      const visibleUntil = ev.end || d;
+      return visibleUntil >= todayMid && d <= cutoff;
     });
 
     list.innerHTML = '';
@@ -898,8 +899,10 @@ async function loadAgenda() {
 
     const byDay = new Map();
     upcoming.forEach(ev => {
-      const k = dayKey(ev.start);
-      if (!byDay.has(k)) byDay.set(k, { date: ev.start, events: [] });
+      // Nachtdienst-blok dat al begonnen is: toon onder vandaag
+      const showDate = (ev.end && ev.start < todayMid && ev.end >= todayMid) ? new Date(todayMid) : ev.start;
+      const k = dayKey(showDate);
+      if (!byDay.has(k)) byDay.set(k, { date: showDate, events: [] });
       byDay.get(k).events.push(ev);
     });
 
