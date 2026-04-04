@@ -439,6 +439,7 @@
     </div>
     <button class="cfg-save" onclick="saveConfig()">Opslaan &amp; herladen</button>
     <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
+    <span class="cfg-cancel" style="color:#f87171;margin-top:4px" onclick="if(confirm('Alle instellingen wissen?')){localStorage.clear();location.reload();}">Instellingen resetten</span>
   </div>
 </div>
 
