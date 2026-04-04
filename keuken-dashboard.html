@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Keuken">
+<title>Keuken Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f18;
+    --surface: #161a26;
+    --surface2: #1e2335;
+    --border: rgba(255,255,255,0.11);
+    --text: #f0f2fa;
+    --muted: #8a95b0;
+    --accent: #4f8ef7;
+    --accent2: #34d399;
+    --warm: #fbbf24;
+    --rain: #60a5fa;
+    --purple: #b39dfa;
+    --radius: 18px;
+    --radius-sm: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── GRID LAYOUT ── */
+  #app {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    grid-template-rows: auto auto 1fr 50px;
+    gap: 8px;
+    padding: 8px;
+    height: 100vh;
+    height: 100dvh; /* iOS dynamic viewport */
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow: hidden;
+  }
+
+  .label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.13em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── KLOK + WEER ── */
+  #top {
+    grid-column: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #141c2e 0%, #1a1f2e 100%);
+    border: 1px solid rgba(79,142,247,0.22);
+    border-radius: var(--radius);
+    gap: 16px;
+  }
+  #time {
+    font-family: 'DM Mono', monospace;
+    font-size: 68px;
+    font-weight: 300;
+    color: #fff;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  #date-str { font-size: 16px; color: #c0c8dc; margin-top: 5px; font-weight: 400; }
+  #weather-block {
+    display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 18px;
+  }
+  #weather-icon { font-size: 46px; line-height: 1; }
+  #weather-right { text-align: right; }
+  #weather-temp { font-family: 'DM Mono', monospace; font-size: 44px; font-weight: 300; color: #fff; line-height: 1; }
+  #weather-desc { font-size: 15px; color: var(--accent); margin-top: 4px; font-weight: 500; }
+  #weather-extra { font-size: 13px; color: var(--muted); margin-top: 3px; }
+
+  /* ── RADAR ── */
+  #radar-card {
+    grid-column: 1 / 3;
+    padding: 12px 16px 12px;
+    background: linear-gradient(135deg, #0f1624 0%, #141820 100%);
+    border-color: rgba(96,165,250,0.18);
+  }
+  #radar-inner { display: flex; align-items: flex-end; gap: 3px; height: 38px; margin-top: 8px; }
+  .rbar { flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; transition: height 0.6s ease; }
+  #radar-times { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
+  #radar-status { font-size: 13px; font-weight: 500; }
+
+  /* ── AGENDA ── */
+  #agenda-card {
+    grid-column: 1;
+    grid-row: 3;
+    background: linear-gradient(160deg, #13192a 0%, #141820 100%);
+    border-color: rgba(179,157,250,0.22);
+    display: flex; flex-direction: column;
+  }
+  #agenda-card .label { color: var(--purple); }
+  #agenda-list { flex: 1; overflow-y: auto; }
+  #agenda-list::-webkit-scrollbar { width: 3px; }
+  #agenda-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .day-header {
+    font-size: 12px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--purple);
+    background: rgba(179,157,250,0.1);
+    border-radius: 6px;
+    padding: 5px 9px;
+    margin: 8px 0 4px;
+  }
+  .day-header:first-child { margin-top: 0; }
+  .day-header.today { color: var(--accent2); background: rgba(52,211,153,0.1); }
+
+  .agenda-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .agenda-item:last-child { border-bottom: none; }
+  .a-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .a-time { font-family: 'DM Mono', monospace; font-size: 14px; color: #b0b8cc; min-width: 50px; flex-shrink: 0; font-weight: 400; }
+  .a-title { font-size: 16px; font-weight: 500; color: #fff; line-height: 1.25; }
+  .agenda-item.past .a-title { color: #5a6380; text-decoration: line-through; text-decoration-color: #3a4060; }
+  .agenda-item.past .a-time  { color: #3e4860; }
+  .agenda-item.past .a-dot   { opacity: 0.2; }
+  .a-now {
+    background: rgba(79,142,247,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    margin: 0 -4px 0 -4px;
+    padding: 2px 4px 2px 8px;
+  }
+  .no-msg { font-size: 14px; color: var(--muted); font-style: italic; padding: 8px 0; }
+
+  /* ── LICHTEN (rechter paneel) ── */
+  #lights-card {
+    grid-column: 2;
+    grid-row: 3;
+    background: linear-gradient(160deg, #1c1a10 0%, #141820 100%);
+    border-color: rgba(251,191,36,0.22);
+    display: flex; flex-direction: column;
+    padding: 14px 14px 12px;
+  }
+  #lights-card .label { color: var(--warm); }
+  #lights-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    flex: 1;
+  }
+  .light-unit {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 10px 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 7px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .light-unit.on {
+    border-color: rgba(251,191,36,0.55);
+    background: rgba(251,191,36,0.08);
+    box-shadow: 0 0 18px rgba(251,191,36,0.1);
+  }
+  .bulb-icon {
+    width: 42px; height: 42px; border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s; font-size: 20px;
+  }
+  .light-unit.on .bulb-icon {
+    border-color: var(--warm);
+    background: rgba(251,191,36,0.18);
+    box-shadow: 0 0 16px rgba(251,191,36,0.4);
+  }
+  .light-name { font-size: 14px; color: #9aa3b8; text-align: center; font-weight: 500; }
+  .light-unit.on .light-name { color: var(--warm); }
+  .slider-row { display: flex; align-items: center; gap: 5px; width: 100%; padding: 0 2px; }
+  .dim-slider {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; height: 4px; border-radius: 2px;
+    background: rgba(255,255,255,0.1); outline: none; cursor: pointer;
+  }
+  .light-unit.on .dim-slider {
+    background: linear-gradient(to right, var(--warm) 0%, var(--warm) var(--pct,80%), rgba(255,255,255,0.1) var(--pct,80%));
+  }
+  .dim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 20px; height: 20px;
+    border-radius: 50%; background: var(--warm); cursor: pointer;
+    opacity: 0.4; transition: opacity 0.2s;
+    box-shadow: 0 0 6px rgba(251,191,36,0.4);
+  }
+  .light-unit.on .dim-slider::-webkit-slider-thumb { opacity: 1; }
+  .dim-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 28px; text-align: right; }
+  .light-unit.on .dim-pct { color: var(--warm); }
+  .light-unit:not(.on) .slider-row { opacity: 0.35; pointer-events: all; }
+
+  #lights-footer { margin-top: 10px; display: flex; align-items: center; justify-content: space-between; }
+  #hue-status { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
+  #gh-link {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(66,133,244,0.12); border: 1px solid rgba(66,133,244,0.3);
+    border-radius: 10px; color: #8ab4f8; font-size: 13px; font-weight: 500;
+    padding: 8px 14px; cursor: pointer; text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── MELDINGEN TICKER (onderaan) ── */
+  #msg-bar {
+    grid-column: 1 / 3;
+    grid-row: 4;
+    background: linear-gradient(135deg, #111828 0%, #141820 100%);
+    border: 1px solid rgba(79,142,247,0.15);
+    border-radius: var(--radius);
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 50px;
+    min-height: 50px;
+    max-height: 50px;
+    overflow: hidden;
+  }
+  #msg-bar-label {
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    color: var(--accent); text-transform: uppercase; letter-spacing: 0.12em;
+    flex-shrink: 0; white-space: nowrap;
+  }
+  #msg-bar-divider {
+    width: 1px; height: 20px; background: rgba(79,142,247,0.3); flex-shrink: 0;
+  }
+  #ticker-wrap {
+    flex: 1; overflow: hidden; position: relative; height: 100%;
+    display: flex; align-items: center;
+  }
+  #ticker-wrap::before, #ticker-wrap::after {
+    content: ''; position: absolute; top: 0; bottom: 0; width: 30px; z-index: 2;
+  }
+  #ticker-wrap::before { left: 0; background: linear-gradient(to right, #111828, transparent); }
+  #ticker-wrap::after  { right: 0; background: linear-gradient(to left, #141820, transparent); }
+  #ticker-inner {
+    display: flex; gap: 0; white-space: nowrap;
+    animation: ticker-scroll 20s linear infinite;
+  }
+  #ticker-inner.paused { animation-play-state: paused; }
+  #ticker-inner.no-anim { animation: none; }
+  @keyframes ticker-scroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .ticker-item {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 28px;
+    font-size: 16px; font-weight: 600; color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: 0.01em;
+    text-shadow: 0 0 20px rgba(79,142,247,0.4);
+  }
+  .ticker-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    box-shadow: 0 0 8px var(--accent);
+  }
+  .ticker-time {
+    font-size: 12px; font-family: 'DM Mono', monospace;
+    color: var(--accent); margin-left: 2px; font-weight: 400;
+  }
+  .ticker-sep {
+    display: inline-block; padding: 0 16px;
+    color: rgba(79,142,247,0.3); font-size: 18px; line-height: 1;
+  }
+  #ticker-empty {
+    font-size: 13px; color: var(--muted); font-style: italic;
+  }
+  #msg-clear {
+    font-size: 12px; color: var(--muted); cursor: pointer;
+    flex-shrink: 0; padding: 4px 8px;
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+  @keyframes slideIn { from { opacity:0; transform:translateX(8px); } to { opacity:1; transform:translateX(0); } }
+  .msg-chip-text { font-size: 14px; color: #fff; font-weight: 500; }
+  .msg-chip-time { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
+  #msg-bar-empty { font-size: 13px; color: var(--muted); font-style: italic; }
+  #msg-bar-ntfy { font-size: 11px; color: var(--muted); flex-shrink: 0; font-family: 'DM Mono', monospace; }
+  #msg-bar-ntfy a { color: var(--accent); text-decoration: none; }
+  #msg-clear { font-size: 12px; color: var(--muted); cursor: pointer; flex-shrink: 0; padding: 4px 8px; }
+
+  /* config */
+  #config-btn {
+    position: fixed; top: 18px; right: 18px;
+    width: 32px; height: 32px; border-radius: 50%;
+    background: rgba(30,35,53,0.85); border: 1px solid var(--border);
+    color: var(--muted); font-size: 15px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 100;
+    backdrop-filter: blur(8px);
+  }
+  #config-panel {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.78); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  #config-panel.open { display: flex; }
+  #config-inner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; width: 360px;
+    max-width: 92vw; max-height: 90vh; overflow-y: auto;
+  }
+  #config-inner h2 { font-size: 17px; font-weight: 500; margin-bottom: 16px; }
+  .cfg-row { margin-bottom: 13px; }
+  .cfg-row label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-family: 'DM Mono', monospace; }
+  .cfg-row input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; color: var(--text);
+    font-size: 14px; font-family: 'DM Mono', monospace; outline: none;
+  }
+  .cfg-row input:focus { border-color: var(--accent); }
+  .cfg-save {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 11px 18px; font-size: 14px; font-weight: 500;
+    cursor: pointer; width: 100%; margin-top: 4px;
+  }
+  .cfg-cancel { display: block; text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- KLOK + WEER -->
+  <div id="top">
+    <div id="clock-block">
+      <div id="time">--:--</div>
+      <div id="date-str">laden…</div>
+    </div>
+    <div id="weather-block">
+      <div id="weather-icon">☁️</div>
+      <div id="weather-right">
+        <div id="weather-temp">--°</div>
+        <div id="weather-desc">laden…</div>
+        <div id="weather-extra"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RADAR -->
+  <div class="card" id="radar-card">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="label" style="margin-bottom:0;color:var(--rain)" id="radar-label">Neerslag komend uur</div>
+      <div id="radar-status">laden…</div>
+    </div>
+    <div id="radar-inner"></div>
+    <div id="radar-times"></div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="card" id="agenda-card">
+    <div class="label">Agenda</div>
+    <div id="agenda-list"><div class="no-msg">Agenda laden…</div></div>
+  </div>
+
+  <!-- LICHTEN -->
+  <div class="card" id="lights-card">
+    <div class="label">Verlichting</div>
+    <div id="lights-grid"></div>
+    <div id="lights-footer">
+      <span id="hue-status">Hue: laden…</span>
+      <a id="gh-link" href="https://home.google.com" onclick="openGH(event)">🏠 Andere lampen</a>
+    </div>
+  </div>
+
+  <!-- MELDINGEN TICKER -->
+  <div id="msg-bar">
+    <div id="msg-bar-label">📨 Meldingen</div>
+    <div id="msg-bar-divider"></div>
+    <div id="ticker-wrap">
+      <div id="ticker-inner">
+        <span id="ticker-empty">Nog geen meldingen — stuur via ntfy.sh/keuken-chrashdash</span>
+      </div>
+    </div>
+    <span id="msg-clear" onclick="clearMessages()">wis</span>
+  </div>
+
+</div>
+
+<!-- Config knop -->
+<div id="config-btn" onclick="openConfig()">⚙</div>
+
+<!-- Config panel -->
+<div id="config-panel">
+  <div id="config-inner">
+    <h2>⚙ Instellingen</h2>
+    <div class="cfg-row">
+      <label>Stad (voor weer)</label>
+      <input id="cfg-city" type="text" placeholder="Schiedam" />
+    </div>
+    <div class="cfg-row">
+      <label>Google Agenda iCal URL(s) — meerdere met komma scheiden</label>
+      <input id="cfg-ical" type="text" placeholder="https://…ical…, https://…ical…" />
+    </div>
+    <div class="cfg-row">
+      <label>ntfy kanaal</label>
+      <input id="cfg-ntfy" type="text" placeholder="keuken-chrashdash" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue Bridge IP</label>
+      <input id="cfg-hue-ip" type="text" placeholder="192.168.1.29" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue API Token</label>
+      <input id="cfg-hue-token" type="text" placeholder="lange token" />
+    </div>
+    <button class="cfg-save" onclick="saveConfig()">Opslaan &amp; herladen</button>
+    <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────
+const CFG_KEY = 'dashboard_cfg';
+
+// Vaste fallback-waarden — worden gebruikt als localStorage leeg is
+const DEFAULTS = {
+  city:     'Schiedam',
+  ntfy:     'keuken-chrashdash',
+  hueIp:    '192.168.1.29',
+  hueToken: 'zWIxvCKj4OD-BHxUX32O5PVhfuaigmVTp45SJzMG',
+  ical:     'https://calendar.google.com/calendar/ical/rademakerpetera%40gmail.com/private-f99d0d51ffcb44129f8ee2a6ee3e901a/basic.ics,https://calendar.google.com/calendar/ical/5iqoeqeoho2oviud5p6n3q721qkim5p1%40import.calendar.google.com/public/basic.ics'
+};
+
+const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+// Samenvoegen: opgeslagen waarden hebben voorrang, maar lege waarden tellen niet
+let cfg = Object.assign({}, DEFAULTS);
+Object.keys(saved).forEach(k => { if (saved[k]) cfg[k] = saved[k]; });
+
+function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+// Meteen opslaan zodat het zeker staat
+saveLocalCfg();
+
+function openConfig() {
+  document.getElementById('cfg-city').value      = cfg.city     || '';
+  document.getElementById('cfg-ical').value      = cfg.ical     || '';
+  document.getElementById('cfg-ntfy').value      = cfg.ntfy     || '';
+  document.getElementById('cfg-hue-ip').value    = cfg.hueIp    || '';
+  document.getElementById('cfg-hue-token').value = cfg.hueToken || '';
+  document.getElementById('config-panel').classList.add('open');
+}
+function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
+function saveConfig() {
+  cfg.city     = document.getElementById('cfg-city').value.trim();
+  cfg.ical     = document.getElementById('cfg-ical').value.trim();
+  cfg.ntfy     = document.getElementById('cfg-ntfy').value.trim();
+  cfg.hueIp    = document.getElementById('cfg-hue-ip').value.trim();
+  cfg.hueToken = document.getElementById('cfg-hue-token').value.trim();
+  saveLocalCfg();
+  closeConfig();
+  initAll();
+}
+
+// ─── KLOK ────────────────────────────────────────────────────────────
+const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+function pad(n){ return String(n).padStart(2,'0'); }
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time').textContent = pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('date-str').textContent =
+    DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ─── WEER ────────────────────────────────────────────────────────────
+const weatherIcons = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',
+  71:'❄️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const weatherDesc = {
+  0:'Helder',1:'Licht bewolkt',2:'Gedeeltelijk bewolkt',3:'Bewolkt',
+  45:'Mist',48:'Mist',51:'Lichte motregen',53:'Motregen',55:'Zware motregen',
+  61:'Lichte regen',63:'Regen',65:'Zware regen',71:'Lichte sneeuw',73:'Sneeuw',
+  75:'Zware sneeuw',80:'Regenbuien',81:'Regenbuien',82:'Zware buien',
+  95:'Onweer',96:'Onweer',99:'Zwaar onweer'
+};
+
+async function loadWeather() {
+  try {
+    const city = encodeURIComponent(cfg.city || 'Schiedam');
+    const geo  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=nl&format=json`);
+    const gd   = await geo.json();
+    if (!gd.results?.length) return;
+    const { latitude: lat, longitude: lon, name: cityName } = gd.results[0];
+    const lbl = document.getElementById('radar-label');
+    if (lbl) lbl.textContent = `Neerslag komend uur · ${cityName}`;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&timezone=Europe%2FAmsterdam&forecast_days=1`);
+    const d = await r.json();
+    const c = d.current, code = c.weathercode;
+    document.getElementById('weather-icon').textContent = weatherIcons[code] || '🌡️';
+    document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m)+'°';
+    document.getElementById('weather-desc').textContent = weatherDesc[code] || 'Onbekend';
+    document.getElementById('weather-extra').textContent = `💨 ${Math.round(c.windspeed_10m)} km/u · 💧 ${c.relativehumidity_2m}%`;
+    buildRadar(d.hourly);
+  } catch(e) {
+    document.getElementById('weather-desc').textContent = 'Geen verbinding';
+  }
+}
+
+function buildRadar(hourly) {
+  const now = new Date(), nowHour = now.getHours();
+  const bars = document.getElementById('radar-inner'), times = document.getElementById('radar-times');
+  bars.innerHTML = ''; times.innerHTML = '';
+  const hours    = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
+  const relevant = hours.filter(h => h.h >= nowHour && h.h < nowHour+6);
+  if (!relevant.length) return;
+  const maxP = Math.max(...relevant.map(h => h.p), 0.5);
+  let anyRain = false;
+  relevant.forEach((h, i) => {
+    const pct = Math.min(100, (h.p / maxP) * 100);
+    const bar = document.createElement('div');
+    bar.className = 'rbar';
+    bar.style.cssText = `height:${Math.max(4,pct*0.38)}px;background:${h.p>1?'#4f8ef7':h.p>0.2?'#67b2fa':'#2d3748'};opacity:${h.p>0?0.9:0.2}`;
+    bars.appendChild(bar);
+    if (h.p > 0.1) anyRain = true;
+    if (i===0 || i===relevant.length-1 || i===Math.floor(relevant.length/2)) {
+      const span = document.createElement('span');
+      span.textContent = pad(h.h)+':00'; span.style.flex='1';
+      if (i===relevant.length-1) span.style.textAlign='right';
+      if (i>0&&i<relevant.length-1) span.style.textAlign='center';
+      times.appendChild(span);
+    }
+  });
+  const st = document.getElementById('radar-status');
+  st.textContent = anyRain ? '🌧 regen verwacht' : '✓ droog';
+  st.style.color = anyRain ? 'var(--rain)' : 'var(--accent2)';
+}
+
+// ─── LICHTEN (Philips Hue) ───────────────────────────────────────────
+let hueGroups = [], hueConnected = false;
+function hueBase() { return `https://${cfg.hueIp}/api/${cfg.hueToken}`; }
+
+function setHueStatus(msg, ok) {
+  const el = document.getElementById('hue-status');
+  if (el) { el.textContent = msg; el.style.color = ok ? 'var(--accent2)' : 'var(--muted)'; }
+}
+
+async function loadHueLights() {
+  if (!cfg.hueIp || !cfg.hueToken) { setHueStatus('Hue: stel in via ⚙️', false); buildLightsFallback(); return; }
+  try {
+    const r = await fetch(`${hueBase()}/groups`);
+    if (!r.ok) throw new Error();
+    const data = await r.json();
+    hueGroups = Object.entries(data)
+      .filter(([,g]) => ['Room','Zone','LightGroup'].includes(g.type))
+      .map(([id,g]) => ({ id, name: g.name, on: g.action.on, bri: g.action.bri!=null?Math.round(g.action.bri/2.54):100, type:'group' }));
+    if (!hueGroups.length) {
+      const lr = await fetch(`${hueBase()}/lights`);
+      const ld = await lr.json();
+      hueGroups = Object.entries(ld).map(([id,l]) => ({ id, name: l.name, on: l.state.on, bri: Math.round(l.state.bri/2.54), type:'light' }));
+    }
+    hueConnected = true;
+    setHueStatus(`Hue ✓ · ${hueGroups.length}`, true);
+    buildLightsHue();
+  } catch(e) {
+    hueConnected = false;
+    setHueStatus('Hue: geen verbinding', false);
+    buildLightsFallback();
+  }
+}
+
+function buildLightsHue() {
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  const cols = hueGroups.length <= 2 ? 1 : 2;
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  hueGroups.forEach(group => {
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (group.on?' on':'');
+    unit.id = 'light-'+group.id;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${group.name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${group.bri}" step="1"
+          oninput="onHueDim('${group.id}','${group.type}',this)"
+          onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${group.id}">${group.bri}%</div>
+      </div>`;
+    unit.addEventListener('click', () => toggleHueLight(group.id, group.type));
+    unit.addEventListener('touchend', e => { e.preventDefault(); toggleHueLight(group.id, group.type); });
+    grid.appendChild(unit);
+    updateSliderGrad(group.id, group.bri);
+  });
+}
+
+async function toggleHueLight(id, type) {
+  const g = hueGroups.find(x => x.id===id); if (!g) return;
+  const newOn = !g.on; g.on = newOn;
+  const unit = document.getElementById('light-'+id);
+  if (unit) unit.classList.toggle('on', newOn);
+  try {
+    const ep = type==='group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
+    await fetch(ep, { method:'PUT', body: JSON.stringify({ on: newOn }) });
+  } catch(e) { g.on=!newOn; if(unit) unit.classList.toggle('on',!newOn); }
+}
+
+async function onHueDim(id, type, slider) {
+  const pct = parseInt(slider.value);
+  const g = hueGroups.find(x => x.id===id);
+  if (g) { g.bri=pct; g.on=true; }
+  const el = document.getElementById('pct-'+id); if (el) el.textContent=pct+'%';
+  updateSliderGrad(id, pct);
+  const unit = document.getElementById('light-'+id); if (unit) unit.classList.add('on');
+  try {
+    const ep = type==='group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
+    await fetch(ep, { method:'PUT', body: JSON.stringify({ on:true, bri: Math.max(1,Math.round(pct*2.54)) }) });
+  } catch(e) {}
+}
+
+let lightStates = {};
+function buildLightsFallback() {
+  const names = ['Keuken','Woonkamer','Slaapkamer','Hal','Buiten'];
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+  names.forEach(name => {
+    if (!lightStates[name]) lightStates[name] = { on:false, pct:80 };
+    const st = lightStates[name];
+    const unit = document.createElement('div');
+    unit.className = 'light-unit'+(st.on?' on':''); unit.id='light-'+name;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${st.pct}" step="1"
+          oninput="onDimFb('${name}',this)" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${name}">${st.pct}%</div>
+      </div>`;
+    unit.addEventListener('click', () => { st.on=!st.on; unit.classList.toggle('on',st.on); });
+    unit.addEventListener('touchend', e => { e.preventDefault(); st.on=!st.on; unit.classList.toggle('on',st.on); });
+    grid.appendChild(unit);
+    updateSliderGrad(name, st.pct);
+  });
+}
+function onDimFb(name, slider) {
+  const pct=parseInt(slider.value); if(lightStates[name]) lightStates[name].pct=pct;
+  const el=document.getElementById('pct-'+name); if(el) el.textContent=pct+'%';
+  updateSliderGrad(name,pct);
+}
+function buildLights() { loadHueLights(); }
+function updateSliderGrad(id, pct) {
+  const s = document.querySelector(`#light-${id} .dim-slider`);
+  if (s) s.style.setProperty('--pct', pct+'%');
+}
+function openGH(e) {
+  e.preventDefault();
+  // Opent Google Home app op iOS als geïnstalleerd, anders website
+  window.location.href = 'googlehome://';
+  setTimeout(() => { window.open('https://home.google.com', '_blank'); }, 500);
+}
+setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
+
+// ─── MELDINGEN (ticker) ─────────────────────────────────────────────
+let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
+let ntfyES = null;
+
+function clearMessages() {
+  messages = []; localStorage.removeItem('dashboard_msgs'); renderTicker();
+}
+function saveMessages() { localStorage.setItem('dashboard_msgs', JSON.stringify(messages.slice(-20))); }
+
+function renderTicker() {
+  const inner = document.getElementById('ticker-inner');
+  if (!messages.length) {
+    const ch = cfg.ntfy || 'keuken-chrashdash';
+    inner.className = 'no-anim';
+    inner.innerHTML = `<span id="ticker-empty" style="font-size:13px;color:var(--muted);font-style:italic">Nog geen meldingen — stuur via ntfy.sh/${ch}</span>`;
+    return;
+  }
+
+  // Bouw één set items, dupliceer voor naadloze loop
+  const makeItems = () => messages.map(m =>
+    `<span class="ticker-item">
+      <span class="ticker-dot"></span>
+      ${m.text}
+      <span class="ticker-time">${m.time}</span>
+    </span><span class="ticker-sep">·</span>`
+  ).join('');
+
+  const html = makeItems() + makeItems(); // duplicaat voor loop
+  inner.className = '';
+  inner.innerHTML = html;
+
+  // Pas animatiesnelheid aan op aantal tekens (ca. 80px/s)
+  const totalChars = messages.reduce((s, m) => s + m.text.length, 0);
+  const duration = Math.max(8, totalChars * 0.25);
+  inner.style.animationDuration = duration + 's';
+}
+
+function startNtfy() {
+  if (ntfyES) { try { ntfyES.close(); } catch(e){} }
+  renderTicker();
+  if (!cfg.ntfy) return;
+  try {
+    ntfyES = new EventSource(`https://ntfy.sh/${cfg.ntfy}/sse`);
+    ntfyES.onmessage = e => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.event==='message' && data.message) {
+          const now = new Date();
+          messages.push({ text: data.message, time: pad(now.getHours())+':'+pad(now.getMinutes()) });
+          if (messages.length > 20) messages.shift();
+          saveMessages(); renderTicker();
+        }
+      } catch(err) {}
+    };
+  } catch(err) {}
+}
+
+// ─── AGENDA (iCal, tijdzone-bewust) ─────────────────────────────────
+const COLORS = ['#4f8ef7','#34d399','#fbbf24','#f472b6','#b39dfa','#fb923c'];
+const DAYS_SHORT   = ['zo','ma','di','wo','do','vr','za'];
+const MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+function parseIcal(text) {
+  const events = [];
+  text.split('BEGIN:VEVENT').slice(1).forEach(block => {
+    const get = k => { const m = block.match(new RegExp(k+'[^:]*:([^\r\n]+)')); return m?m[1].trim():''; };
+    const summary = get('SUMMARY'), dtstart = get('DTSTART');
+    if (!summary || !dtstart) return;
+
+    const parseDate = s => {
+      // Datum zonder tijd (allDay)
+      if (/^\d{8}$/.test(s)) return { date: new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)), allDay: true };
+      // Met Z suffix = UTC → converteer naar lokale tijd
+      if (s.endsWith('Z')) {
+        const utc = new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(9,11)+':'+s.slice(11,13)+':'+s.slice(13,15)+'Z');
+        return { date: utc, allDay: false };
+      }
+      // Zonder Z = lokale tijd (al correct)
+      const clean = s.replace(/T/,' ').slice(0,15);
+      return { date: new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T'+s.slice(9,11)+':'+s.slice(11,13)+':'+s.slice(13,15)), allDay: false };
+    };
+
+    const parsed = parseDate(dtstart);
+    if (!parsed) return;
+    events.push({ summary, start: parsed.date, allDay: parsed.allDay });
+  });
+  return events.sort((a,b) => a.start-b.start);
+}
+
+function dayKey(d) { return d.getFullYear()*10000+d.getMonth()*100+d.getDate(); }
+
+function formatDayLabel(date) {
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dateMid  = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diff = Math.round((dateMid-todayMid)/86400000);
+  if (diff===0) return 'Vandaag';
+  if (diff===1) return 'Morgen';
+  return DAYS_SHORT[date.getDay()]+' '+date.getDate()+' '+MONTHS_SHORT[date.getMonth()];
+}
+
+async function loadAgenda() {
+  const list = document.getElementById('agenda-list');
+  if (!cfg.ical) {
+    list.innerHTML='<div class="no-msg">Geen agenda — voeg iCal URL toe via ⚙️</div>'; return;
+  }
+  list.innerHTML='<div class="no-msg">Laden…</div>';
+  try {
+    // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
+    const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
+
+    // Haal alle agenda's parallel op — probeer twee proxies
+    const allEvents = [];
+    await Promise.all(urls.map(async icalUrl => {
+      try {
+        const bust = (icalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+        const encoded = encodeURIComponent(icalUrl + bust);
+        // Probeer eerst allorigins, dan corsproxy als fallback
+        let text = null;
+        for (const proxy of [
+          `https://api.allorigins.win/raw?url=${encoded}`,
+          `https://corsproxy.io/?url=${encoded}`
+        ]) {
+          try {
+            const r = await fetch(proxy, { cache: 'no-store' });
+            if (r.ok) { text = await r.text(); break; }
+          } catch(e) {}
+        }
+        if (!text) return;
+        const events = parseIcal(text);
+        allEvents.push(...events);
+      } catch(e) {}
+    }));
+
+    // Sorteer alle events over alle agenda's samen
+    allEvents.sort((a, b) => a.start - b.start);
+
+    const now      = new Date();
+    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+14);
+
+    const upcoming = allEvents.filter(ev => {
+      const d = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
+      return d >= todayMid && d <= cutoff;
+    });
+
+    list.innerHTML = '';
+    if (!upcoming.length) { list.innerHTML='<div class="no-msg">Geen afspraken komende 2 weken</div>'; return; }
+
+    const byDay = new Map();
+    upcoming.forEach(ev => {
+      const k = dayKey(ev.start);
+      if (!byDay.has(k)) byDay.set(k, { date: ev.start, events: [] });
+      byDay.get(k).events.push(ev);
+    });
+
+    let ci = 0;
+    byDay.forEach(({ date, events }) => {
+      const isToday = dayKey(date)===dayKey(now);
+      const hdr = document.createElement('div');
+      hdr.className = 'day-header'+(isToday?' today':'');
+      hdr.textContent = formatDayLabel(date);
+      list.appendChild(hdr);
+      events.forEach(ev => {
+        const isPast  = !ev.allDay && ev.start < now;
+        const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
+        const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
+        const div = document.createElement('div');
+        div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'');
+        div.innerHTML=`
+          <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
+          <div class="a-time">${timeStr}</div>
+          <div class="a-title">${ev.summary}</div>`;
+        list.appendChild(div);
+      });
+    });
+  } catch(e) {
+    list.innerHTML='<div class="no-msg" style="font-size:12px">Agenda niet bereikbaar — controleer iCal URL in ⚙️</div>';
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────
+function initAll() { buildLights(); startNtfy(); loadWeather(); loadAgenda(); }
+initAll();
+setInterval(loadWeather, 10*60*1000);
+setInterval(loadAgenda,   5*60*1000);
+
+async function keepAwake() {
+  if ('wakeLock' in navigator) { try { await navigator.wakeLock.request('screen'); } catch(e){} }
+}
+keepAwake();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+</script>
+</body>
+</html>
