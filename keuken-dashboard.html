@@ -458,6 +458,13 @@ const saved = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
 // Samenvoegen: opgeslagen waarden hebben voorrang, maar lege waarden tellen niet
 let cfg = Object.assign({}, DEFAULTS);
 Object.keys(saved).forEach(k => { if (saved[k]) cfg[k] = saved[k]; });
+// iCal URLs: altijd alle URLs uit DEFAULTS meenemen, ook als er al iets opgeslagen is
+{
+  const savedUrls  = (saved.ical  || '').split(',').map(u => u.trim()).filter(Boolean);
+  const defaultUrls = DEFAULTS.ical.split(',').map(u => u.trim()).filter(Boolean);
+  const merged = [...new Set([...savedUrls, ...defaultUrls])];
+  cfg.ical = merged.join(',');
+}
 
 function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
 // Meteen opslaan zodat het zeker staat
