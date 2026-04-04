@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Keuken Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #181b24;
+    --surface2: #1f2330;
+    --border: rgba(255,255,255,0.07);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #4f8ef7;
+    --accent2: #34d399;
+    --warm: #fbbf24;
+    --rain: #60a5fa;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 10px;
+    padding: 10px;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow: hidden;
+  }
+
+  .label {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* ── TOP: CLOCK + WEATHER ── */
+  #top {
+    grid-column: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    gap: 16px;
+  }
+  #clock-block {}
+  #time {
+    font-family: 'DM Mono', monospace;
+    font-size: 58px;
+    font-weight: 300;
+    color: #fff;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  #date-str {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  #weather-block {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-shrink: 0;
+  }
+  #weather-icon { font-size: 42px; line-height: 1; }
+  #weather-right { text-align: right; }
+  #weather-temp {
+    font-family: 'DM Mono', monospace;
+    font-size: 40px;
+    font-weight: 300;
+    color: #fff;
+    line-height: 1;
+  }
+  #weather-desc { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  #weather-extra { font-size: 11px; color: var(--muted); margin-top: 2px; opacity: 0.7; }
+
+  /* ── RAIN RADAR ── */
+  #radar-card {
+    grid-column: 1 / 3;
+    padding: 12px 16px 14px;
+  }
+  #radar-inner { display: flex; align-items: flex-end; gap: 3px; height: 44px; margin-top: 6px; }
+  .rbar {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    min-height: 3px;
+    transition: height 0.6s ease;
+    position: relative;
+  }
+  #radar-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+  #radar-status { font-size: 12px; color: var(--accent2); font-weight: 400; }
+
+  /* ── AGENDA ── */
+  #agenda-card { grid-column: 1; }
+  .agenda-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 0.5px solid var(--border);
+  }
+  .agenda-item:last-child { border-bottom: none; padding-bottom: 0; }
+  .a-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+  .a-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    min-width: 36px;
+    margin-top: 1px;
+    flex-shrink: 0;
+  }
+  .a-title { font-size: 14px; color: var(--text); line-height: 1.3; }
+  .a-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .a-now { background: rgba(79,142,247,0.06); border-radius: 6px; margin: 0 -4px; padding: 0 4px; }
+
+  #ical-setup {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin-top: 6px;
+    line-height: 1.5;
+  }
+  #ical-setup a { color: var(--accent); text-decoration: none; }
+
+  /* ── MELDINGEN ── */
+  #msg-card { grid-column: 2; display: flex; flex-direction: column; }
+  #msg-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    max-height: 180px;
+  }
+  .msg-item {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 8px 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .msg-text { font-size: 13px; color: var(--text); line-height: 1.4; }
+  .msg-meta { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); margin-top: 4px; }
+  .no-msg { font-size: 13px; color: var(--muted); font-style: italic; padding: 8px 0; }
+
+  #ntfy-info {
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+  #ntfy-info code {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  #ntfy-channel-display { word-break: break-all; }
+
+  /* ── LICHTEN ── */
+  #lights-card {
+    grid-column: 1 / 3;
+    padding: 12px 16px;
+  }
+  #lights-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .light-unit {
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .light-unit.on {
+    border-color: rgba(251,191,36,0.4);
+    background: rgba(251,191,36,0.06);
+  }
+  .bulb-icon {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    font-size: 14px;
+  }
+  .light-unit.on .bulb-icon {
+    border-color: var(--warm);
+    background: rgba(251,191,36,0.15);
+    box-shadow: 0 0 10px rgba(251,191,36,0.3);
+  }
+  .light-name {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: center;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+  .light-unit.on .light-name { color: var(--warm); }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 0 2px;
+  }
+  .dim-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    flex: 1;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  .light-unit.on .dim-slider {
+    background: linear-gradient(to right, var(--warm) 0%, var(--warm) var(--pct, 80%), rgba(255,255,255,0.1) var(--pct, 80%));
+  }
+  .dim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--warm);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .light-unit.on .dim-slider::-webkit-slider-thumb { opacity: 1; }
+  .dim-pct {
+    font-size: 10px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    min-width: 26px;
+    text-align: right;
+  }
+  .light-unit.on .dim-pct { color: var(--warm); }
+
+  /* hide slider when off */
+  .light-unit:not(.on) .slider-row { opacity: 0.3; pointer-events: none; }
+
+  /* Google Home link button */
+  #gh-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(66,133,244,0.1);
+    border: 0.5px solid rgba(66,133,244,0.3);
+    border-radius: 8px;
+    color: #8ab4f8;
+    font-size: 12px;
+    padding: 7px 14px;
+    cursor: pointer;
+    text-decoration: none;
+    margin-top: 10px;
+    width: fit-content;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* scrollbar */
+  #msg-list::-webkit-scrollbar { width: 3px; }
+  #msg-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* config panel */
+  #config-btn {
+    position: fixed;
+    bottom: 14px; right: 14px;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    color: var(--muted);
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    z-index: 100;
+  }
+  #config-panel {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+  #config-panel.open { display: flex; }
+  #config-inner {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    width: 340px;
+    max-width: 90vw;
+  }
+  #config-inner h2 { font-size: 16px; font-weight: 500; margin-bottom: 14px; }
+  .cfg-row { margin-bottom: 12px; }
+  .cfg-row label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+  .cfg-row input {
+    width: 100%;
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: 'DM Mono', monospace;
+    outline: none;
+  }
+  .cfg-row input:focus { border-color: var(--accent); }
+  .cfg-save {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 13px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+  }
+  .cfg-cancel {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 10px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP: CLOCK + WEATHER -->
+  <div id="top">
+    <div id="clock-block">
+      <div id="time">--:--</div>
+      <div id="date-str">laden…</div>
+    </div>
+    <div id="weather-block">
+      <div id="weather-icon">☁️</div>
+      <div id="weather-right">
+        <div id="weather-temp">--°</div>
+        <div id="weather-desc">weer laden…</div>
+        <div id="weather-extra"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RAIN RADAR -->
+  <div class="card" id="radar-card">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="label">Neerslag · Schiedam</div>
+      <div id="radar-status">laden…</div>
+    </div>
+    <div id="radar-inner"></div>
+    <div id="radar-times"></div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="card" id="agenda-card">
+    <div class="label">Agenda vandaag</div>
+    <div id="agenda-list"><div class="no-msg">Agenda laden… <span id="ical-hint"></span></div></div>
+  </div>
+
+  <!-- MELDINGEN -->
+  <div class="card" id="msg-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="label" style="margin-bottom:0">Meldingen</div>
+      <span id="clear-btn" onclick="clearMessages()" style="font-size:11px;color:var(--muted);cursor:pointer">wis</span>
+    </div>
+    <div id="msg-list"><div class="no-msg">Nog geen meldingen</div></div>
+    <div id="ntfy-info">
+      Stuur bericht via: <code id="ntfy-channel-display">stel kanaal in via ⚙️</code>
+    </div>
+  </div>
+
+  <!-- LICHTEN -->
+  <div class="card" id="lights-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <div class="label" style="margin-bottom:0">Verlichting</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="hue-status" style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">Hue: niet gekoppeld</span>
+        <a id="gh-link" href="#" onclick="openGH(event)" style="display:flex;align-items:center;gap:6px;background:rgba(66,133,244,0.1);border:0.5px solid rgba(66,133,244,0.3);border-radius:8px;color:#8ab4f8;font-size:12px;padding:5px 10px;text-decoration:none;">
+          ⬡ Calex via Google Home
+        </a>
+      </div>
+    </div>
+    <div id="lights-grid"></div>
+  </div>
+
+</div>
+
+<!-- Config knop -->
+<div id="config-btn" onclick="openConfig()">⚙</div>
+
+<!-- Config panel -->
+<div id="config-panel">
+  <div id="config-inner">
+    <h2>Instellingen</h2>
+    <div class="cfg-row">
+      <label>ntfy kanaal (jouw unieke naam)</label>
+      <input id="cfg-ntfy" type="text" placeholder="bijv. keuken-abc123" />
+    </div>
+    <div class="cfg-row">
+      <label>Google Agenda iCal URL</label>
+      <input id="cfg-ical" type="text" placeholder="https://calendar.google.com/calendar/ical/…" />
+    </div>
+    <div class="cfg-row">
+      <label>Lichten (kommagescheiden namen)</label>
+      <input id="cfg-lights" type="text" placeholder="Keuken,Woonkamer,Slaapkamer,Hal,Buiten" />
+    </div>
+    <div class="cfg-row">
+      <label>Locatie (stad voor weer)</label>
+      <input id="cfg-city" type="text" placeholder="Schiedam" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue Bridge IP</label>
+      <input id="cfg-hue-ip" type="text" placeholder="bijv. 192.168.1.42" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue API Token</label>
+      <input id="cfg-hue-token" type="text" placeholder="lange token uit /debug/clip.html" />
+    </div>
+    <button class="cfg-save" onclick="saveConfig()">Opslaan & herladen</button>
+    <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────
+const CFG_KEY = 'dashboard_cfg';
+let cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+if (!cfg.ntfy)   cfg.ntfy   = 'keuken-' + Math.random().toString(36).slice(2,8);
+if (!cfg.lights) cfg.lights = 'Keuken,Woonkamer,Slaapkamer,Hal,Buiten';
+if (!cfg.city)   cfg.city   = 'Schiedam';
+saveLocalCfg();
+
+function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+function openConfig() {
+  document.getElementById('cfg-ntfy').value      = cfg.ntfy || '';
+  document.getElementById('cfg-ical').value      = cfg.ical || '';
+  document.getElementById('cfg-lights').value    = cfg.lights || '';
+  document.getElementById('cfg-city').value      = cfg.city || '';
+  document.getElementById('cfg-hue-ip').value    = cfg.hueIp || '';
+  document.getElementById('cfg-hue-token').value = cfg.hueToken || '';
+  document.getElementById('config-panel').classList.add('open');
+}
+function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
+function saveConfig() {
+  cfg.ntfy      = document.getElementById('cfg-ntfy').value.trim();
+  cfg.ical      = document.getElementById('cfg-ical').value.trim();
+  cfg.lights    = document.getElementById('cfg-lights').value.trim();
+  cfg.city      = document.getElementById('cfg-city').value.trim();
+  cfg.hueIp     = document.getElementById('cfg-hue-ip').value.trim();
+  cfg.hueToken  = document.getElementById('cfg-hue-token').value.trim();
+  saveLocalCfg();
+  closeConfig();
+  initAll();
+}
+
+// ─── CLOCK ──────────────────────────────────────────────────────────
+const DAYS  = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS= ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+
+function pad(n){ return String(n).padStart(2,'0'); }
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time').textContent = pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('date-str').textContent =
+    DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ─── WEATHER ────────────────────────────────────────────────────────
+const weatherIcons = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',
+  45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌧️',
+  61:'🌧️',63:'🌧️',65:'🌧️',
+  71:'❄️',73:'❄️',75:'❄️',
+  80:'🌦️',81:'🌧️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const weatherDesc = {
+  0:'Helder',1:'Licht bewolkt',2:'Gedeeltelijk bewolkt',3:'Bewolkt',
+  45:'Mist',48:'Mist',
+  51:'Lichte motregen',53:'Motregen',55:'Zware motregen',
+  61:'Lichte regen',63:'Regen',65:'Zware regen',
+  71:'Lichte sneeuw',73:'Sneeuw',75:'Zware sneeuw',
+  80:'Regenbuien',81:'Regenbuien',82:'Zware buien',
+  95:'Onweer',96:'Onweer',99:'Zwaar onweer'
+};
+
+async function loadWeather() {
+  try {
+    // geocode city
+    const city = encodeURIComponent(cfg.city || 'Schiedam');
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=nl&format=json`);
+    const gd = await geo.json();
+    if (!gd.results || !gd.results.length) return;
+    const { latitude: lat, longitude: lon } = gd.results[0];
+
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&timezone=Europe%2FAmsterdam&forecast_days=1`;
+    const r = await fetch(url);
+    const d = await r.json();
+    const c = d.current;
+    const code = c.weathercode;
+
+    document.getElementById('weather-icon').textContent = weatherIcons[code] || '🌡️';
+    document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m)+'°';
+    document.getElementById('weather-desc').textContent = weatherDesc[code] || 'Onbekend';
+    document.getElementById('weather-extra').textContent =
+      `Wind: ${Math.round(c.windspeed_10m)} km/u · Vochtigheid: ${c.relativehumidity_2m}%`;
+
+    // radar bars
+    buildRadar(d.hourly, lat, lon);
+  } catch(e) {
+    document.getElementById('weather-desc').textContent = 'Geen verbinding';
+  }
+}
+
+function buildRadar(hourly, lat, lon) {
+  const now = new Date();
+  const nowHour = now.getHours();
+  const bars = document.getElementById('radar-inner');
+  const times = document.getElementById('radar-times');
+  bars.innerHTML = ''; times.innerHTML = '';
+
+  const hours = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
+  const relevant = hours.filter(h => h.h >= nowHour && h.h < nowHour+6);
+  if (relevant.length === 0) return;
+
+  const maxP = Math.max(...relevant.map(h => h.p), 0.5);
+  let anyRain = false;
+
+  relevant.forEach((h, i) => {
+    const pct = Math.min(100, (h.p / maxP) * 100);
+    const bar = document.createElement('div');
+    bar.className = 'rbar';
+    const col = h.p > 1 ? '#4f8ef7' : h.p > 0.2 ? '#67b2fa' : '#2d3748';
+    bar.style.cssText = `height:${Math.max(4, pct*0.44)}px;background:${col};opacity:${h.p>0?0.85:0.25}`;
+    bars.appendChild(bar);
+    if (h.p > 0.1) anyRain = true;
+
+    if (i === 0 || i === relevant.length-1 || i === Math.floor(relevant.length/2)) {
+      const span = document.createElement('span');
+      span.textContent = pad(h.h)+':00';
+      span.style.flex = '1';
+      if (i === relevant.length-1) span.style.textAlign = 'right';
+      if (i > 0 && i < relevant.length-1) span.style.textAlign = 'center';
+      times.appendChild(span);
+    }
+  });
+
+  document.getElementById('radar-status').textContent = anyRain ? '🌧 regen verwacht' : '✓ droog komend uur';
+  document.getElementById('radar-status').style.color = anyRain ? 'var(--rain)' : 'var(--accent2)';
+}
+
+// ─── LICHTEN (Philips Hue API) ──────────────────────────────────────
+let hueGroups = [];      // [{id, name, on, bri}]
+let hueConnected = false;
+
+function hueBase() {
+  return `http://${cfg.hueIp}/api/${cfg.hueToken}`;
+}
+
+function setHueStatus(msg, ok) {
+  const el = document.getElementById('hue-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--accent2)' : 'var(--muted)';
+}
+
+async function loadHueLights() {
+  if (!cfg.hueIp || !cfg.hueToken) {
+    setHueStatus('Hue: stel in via ⚙️', false);
+    buildLightsFallback();
+    return;
+  }
+  try {
+    const r = await fetch(`${hueBase()}/groups`);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const data = await r.json();
+
+    hueGroups = Object.entries(data)
+      .filter(([, g]) => g.type === 'Room' || g.type === 'Zone' || g.type === 'LightGroup')
+      .map(([id, g]) => ({
+        id,
+        name: g.name,
+        on:   g.action.on,
+        bri:  g.action.bri != null ? Math.round(g.action.bri / 2.54) : 100,
+        type: 'group'
+      }));
+
+    // If no groups, fall back to individual lights
+    if (!hueGroups.length) {
+      const lr = await fetch(`${hueBase()}/lights`);
+      const ld = await lr.json();
+      hueGroups = Object.entries(ld).map(([id, l]) => ({
+        id,
+        name: l.name,
+        on:   l.state.on,
+        bri:  Math.round(l.state.bri / 2.54),
+        type: 'light'
+      }));
+    }
+
+    hueConnected = true;
+    setHueStatus(`Hue ✓ · ${hueGroups.length} kamers`, true);
+    buildLightsHue();
+  } catch(e) {
+    hueConnected = false;
+    setHueStatus('Hue: geen verbinding', false);
+    buildLightsFallback();
+  }
+}
+
+function buildLightsHue() {
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  const cols = Math.min(Math.max(hueGroups.length, 1), 6);
+  grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+  hueGroups.forEach(group => {
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (group.on ? ' on' : '');
+    unit.id = 'light-' + group.id;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${group.name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${group.bri}" step="1"
+          oninput="onHueDim('${group.id}','${group.type}',this)"
+          onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${group.id}">${group.bri}%</div>
+      </div>`;
+    unit.addEventListener('click', () => toggleHueLight(group.id, group.type));
+    unit.addEventListener('touchend', (e) => { e.preventDefault(); toggleHueLight(group.id, group.type); });
+    grid.appendChild(unit);
+    updateSliderGrad(group.id, group.bri);
+  });
+}
+
+async function toggleHueLight(id, type) {
+  const group = hueGroups.find(g => g.id === id);
+  if (!group) return;
+  const newOn = !group.on;
+  group.on = newOn;
+
+  // Optimistic UI update
+  const unit = document.getElementById('light-' + id);
+  if (unit) unit.classList.toggle('on', newOn);
+
+  // Send to Hue
+  try {
+    const endpoint = type === 'group'
+      ? `${hueBase()}/groups/${id}/action`
+      : `${hueBase()}/lights/${id}/state`;
+    await fetch(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ on: newOn })
+    });
+  } catch(e) {
+    // Revert on failure
+    group.on = !newOn;
+    if (unit) unit.classList.toggle('on', !newOn);
+  }
+}
+
+async function onHueDim(id, type, slider) {
+  const pct = parseInt(slider.value);
+  const group = hueGroups.find(g => g.id === id);
+  if (group) group.bri = pct;
+  const el = document.getElementById('pct-' + id);
+  if (el) el.textContent = pct + '%';
+  updateSliderGrad(id, pct);
+
+  // Convert 0-100 to Hue 1-254
+  const bri = Math.max(1, Math.round(pct * 2.54));
+  try {
+    const endpoint = type === 'group'
+      ? `${hueBase()}/groups/${id}/action`
+      : `${hueBase()}/lights/${id}/state`;
+    await fetch(endpoint, {
+      method: 'PUT',
+      body: JSON.stringify({ on: true, bri })
+    });
+    // Mark as on when dimming
+    if (group) group.on = true;
+    const unit = document.getElementById('light-' + id);
+    if (unit) unit.classList.add('on');
+  } catch(e) {}
+}
+
+// Fallback: visuele-only modus als Hue niet gekoppeld is
+let lightStates = {};
+function buildLightsFallback() {
+  const names = (cfg.lights || 'Keuken,Woonkamer,Slaapkamer,Hal,Buiten').split(',').map(s=>s.trim()).filter(Boolean);
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${Math.min(names.length,5)},1fr)`;
+
+  names.forEach(name => {
+    if (!lightStates[name]) lightStates[name] = { on: false, pct: 80 };
+    const st = lightStates[name];
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (st.on ? ' on' : '');
+    unit.id = 'light-' + name;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${st.pct}" step="1"
+          oninput="onDimFallback('${name}',this)" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${name}">${st.pct}%</div>
+      </div>`;
+    unit.addEventListener('click', () => { lightStates[name].on = !lightStates[name].on; unit.classList.toggle('on', lightStates[name].on); });
+    unit.addEventListener('touchend', (e) => { e.preventDefault(); lightStates[name].on = !lightStates[name].on; unit.classList.toggle('on', lightStates[name].on); });
+    grid.appendChild(unit);
+    updateSliderGrad(name, st.pct);
+  });
+}
+
+function onDimFallback(name, slider) {
+  const pct = parseInt(slider.value);
+  if (!lightStates[name]) lightStates[name] = { on: true, pct: 80 };
+  lightStates[name].pct = pct;
+  const el = document.getElementById('pct-' + name);
+  if (el) el.textContent = pct + '%';
+  updateSliderGrad(name, pct);
+}
+
+function buildLights() { loadHueLights(); }
+
+function toggleLight(name) {}   // legacy stub
+function onDim(name, slider) {} // legacy stub
+
+function updateSliderGrad(name, pct) {
+  const slider = document.querySelector(`#light-${name} .dim-slider`);
+  if (slider) slider.style.setProperty('--pct', pct+'%');
+}
+
+function openGH(e) {
+  e.preventDefault();
+  window.location.href = 'googlegmail://';
+  setTimeout(() => { window.location.href = 'https://home.google.com'; }, 300);
+}
+
+// Poll Hue every 30s to stay in sync
+setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
+
+// ─── NTFY MELDINGEN ─────────────────────────────────────────────────
+let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
+let ntfyES = null;
+
+function updateNtfyInfo() {
+  const ch = cfg.ntfy || '';
+  document.getElementById('ntfy-channel-display').textContent =
+    ch ? `ntfy.sh/${ch}` : 'stel kanaal in via ⚙️';
+}
+
+function clearMessages() {
+  messages = [];
+  localStorage.removeItem('dashboard_msgs');
+  renderMessages();
+}
+
+function saveMessages() {
+  localStorage.setItem('dashboard_msgs', JSON.stringify(messages.slice(-20)));
+}
+
+function renderMessages() {
+  const box = document.getElementById('msg-list');
+  if (!messages.length) {
+    box.innerHTML = '<div class="no-msg">Nog geen meldingen</div>';
+    return;
+  }
+  box.innerHTML = '';
+  [...messages].reverse().forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'msg-item';
+    d.innerHTML = `<div class="msg-text">${m.text}</div><div class="msg-meta">${m.time} · ntfy</div>`;
+    box.appendChild(d);
+  });
+}
+
+function startNtfy() {
+  if (ntfyES) { try { ntfyES.close(); } catch(e){} }
+  if (!cfg.ntfy) return;
+  updateNtfyInfo();
+  renderMessages(); // toon opgeslagen meldingen meteen
+
+  try {
+    ntfyES = new EventSource(`https://ntfy.sh/${cfg.ntfy}/sse`);
+    ntfyES.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.event === 'message' && data.message) {
+          const now = new Date();
+          messages.push({ text: data.message, time: pad(now.getHours())+':'+pad(now.getMinutes()) });
+          if (messages.length > 20) messages.shift();
+          saveMessages();
+          renderMessages();
+        }
+      } catch(err) {}
+    };
+  } catch(err) {}
+}
+
+// ─── AGENDA (iCal) ──────────────────────────────────────────────────
+const COLORS = ['#4f8ef7','#34d399','#fbbf24','#f472b6','#a78bfa','#fb923c'];
+
+function parseIcal(text) {
+  const events = [];
+  const vevent = text.split('BEGIN:VEVENT');
+  vevent.slice(1).forEach(block => {
+    const get = (k) => {
+      const m = block.match(new RegExp(k+'[^:]*:([^\r\n]+)'));
+      return m ? m[1].trim() : '';
+    };
+    const summary = get('SUMMARY');
+    const dtstart = get('DTSTART');
+    const dtend   = get('DTEND');
+    if (!summary || !dtstart) return;
+
+    const parseDate = (s) => {
+      if (s.length === 8) return new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
+      if (s.includes('T')) {
+        const clean = s.replace(/Z$/,'');
+        return new Date(clean.slice(0,4)+'-'+clean.slice(4,6)+'-'+clean.slice(6,8)+'T'+clean.slice(9,11)+':'+clean.slice(11,13)+':'+clean.slice(13,15));
+      }
+      return null;
+    };
+
+    const start = parseDate(dtstart);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (!start) return;
+    const startDay = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    if (startDay.getTime() !== today.getTime()) return;
+
+    const allDay = dtstart.length === 8;
+    events.push({ summary, start, allDay });
+  });
+  events.sort((a,b) => a.start - b.start);
+  return events;
+}
+
+async function loadAgenda() {
+  const list = document.getElementById('agenda-list');
+  if (!cfg.ical) {
+    list.innerHTML = `<div class="no-msg">Geen agenda gekoppeld.<br>
+      <span style="font-size:11px;color:var(--muted)">Voeg een Google iCal URL toe via ⚙️.<br>
+      Ga in Google Agenda naar Instellingen → jouw agenda → "Privéadres in iCal-indeling".</span></div>`;
+    return;
+  }
+
+  try {
+    // Cache-busting timestamp voorkomt dat corsproxy oude data geeft
+    const bust = '&_cb=' + Date.now();
+    const proxy = 'https://corsproxy.io/?';
+    const r = await fetch(proxy + encodeURIComponent(cfg.ical + bust), { cache: 'no-store' });
+    if (!r.ok) throw new Error('fetch failed');
+    const text = await r.text();
+    const events = parseIcal(text);
+    const now = new Date();
+
+    // Altijd eerst leegmaken voor correcte refresh
+    list.innerHTML = '';
+
+    if (!events.length) {
+      list.innerHTML = '<div class="no-msg">Geen afspraken vandaag</div>';
+      return;
+    }
+
+    events.forEach((ev, i) => {
+      const isPast = !ev.allDay && ev.start < now;
+      const isNow = !ev.allDay && Math.abs(ev.start - now) < 30*60*1000;
+      const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
+      const color = COLORS[i % COLORS.length];
+
+      const div = document.createElement('div');
+      div.className = 'agenda-item' + (isNow ? ' a-now' : '');
+      div.style.opacity = isPast ? '0.45' : '1';
+      div.innerHTML = `
+        <div class="a-dot" style="background:${color}"></div>
+        <div class="a-time">${timeStr}</div>
+        <div><div class="a-title">${ev.summary}</div></div>`;
+      list.appendChild(div);
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="no-msg" style="font-size:11px">Agenda kon niet geladen worden.<br>Controleer de iCal URL in ⚙️</div>';
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────
+function initAll() {
+  buildLights();
+  updateNtfyInfo();
+  startNtfy();
+  loadWeather();
+  loadAgenda();
+}
+
+initAll();
+setInterval(loadWeather, 10*60*1000);  // weer elke 10 min
+setInterval(loadAgenda, 5*60*1000);    // agenda elke 5 min
+
+// Wake lock: voorkom dat scherm dimt (werkt op iOS 16.4+)
+async function keepAwake() {
+  if ('wakeLock' in navigator) {
+    try { await navigator.wakeLock.request('screen'); } catch(e) {}
+  }
+}
+keepAwake();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+</script>
+</body>
+</html>

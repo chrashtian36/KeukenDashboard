@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Keuken Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0c0f18;
+    --surface: #141820;
+    --surface2: #1c2130;
+    --border: rgba(255,255,255,0.09);
+    --text: #eaecf4;
+    --muted: #7a8499;
+    --accent: #4f8ef7;
+    --accent2: #34d399;
+    --warm: #fbbf24;
+    --rain: #60a5fa;
+    --purple: #a78bfa;
+    --radius: 18px;
+    --radius-sm: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    overflow: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  #app {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    grid-template-rows: auto auto 1fr auto;
+    gap: 10px;
+    padding: 10px;
+    height: 100vh;
+    max-height: 100vh;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    overflow: hidden;
+  }
+
+  .label {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.13em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  /* ── TOP: CLOCK + WEATHER ── */
+  #top {
+    grid-column: 1 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px;
+    background: linear-gradient(135deg, #141c2e 0%, #1a1f2e 100%);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: var(--radius);
+    gap: 16px;
+  }
+  #time {
+    font-family: 'DM Mono', monospace;
+    font-size: 66px;
+    font-weight: 300;
+    color: #fff;
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  #date-str {
+    font-size: 15px;
+    color: var(--muted);
+    margin-top: 5px;
+    font-weight: 400;
+  }
+  #weather-block {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 18px;
+  }
+  #weather-icon { font-size: 44px; line-height: 1; }
+  #weather-right { text-align: right; }
+  #weather-temp {
+    font-family: 'DM Mono', monospace;
+    font-size: 42px;
+    font-weight: 300;
+    color: #fff;
+    line-height: 1;
+  }
+  #weather-desc { font-size: 14px; color: var(--accent); margin-top: 4px; font-weight: 500; }
+  #weather-extra { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+  /* ── RAIN RADAR ── */
+  #radar-card {
+    grid-column: 1 / 3;
+    padding: 12px 16px 14px;
+    background: linear-gradient(135deg, #0f1624 0%, #141820 100%);
+    border-color: rgba(96,165,250,0.18);
+  }
+  #radar-inner { display: flex; align-items: flex-end; gap: 3px; height: 40px; margin-top: 8px; }
+  .rbar { flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; transition: height 0.6s ease; }
+  #radar-times {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 5px;
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+  #radar-status { font-size: 13px; font-weight: 500; }
+
+  /* ── AGENDA ── */
+  #agenda-card {
+    grid-column: 1;
+    background: linear-gradient(160deg, #13192a 0%, #141820 100%);
+    border-color: rgba(167,139,250,0.2);
+    display: flex;
+    flex-direction: column;
+  }
+  #agenda-card .label { color: var(--purple); }
+  #agenda-list {
+    flex: 1;
+    overflow-y: auto;
+  }
+  #agenda-list::-webkit-scrollbar { width: 3px; }
+  #agenda-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .day-header {
+    font-size: 11px;
+    font-family: 'DM Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--purple);
+    background: rgba(167,139,250,0.08);
+    border-radius: 6px;
+    padding: 4px 8px;
+    margin: 8px 0 4px;
+  }
+  .day-header:first-child { margin-top: 0; }
+  .day-header.today { color: var(--accent2); background: rgba(52,211,153,0.08); }
+
+  .agenda-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 4px;
+    border-bottom: 1px solid var(--border);
+  }
+  .agenda-item:last-child { border-bottom: none; }
+  .a-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .a-time {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    color: var(--muted);
+    min-width: 48px;
+    flex-shrink: 0;
+  }
+  .a-title { font-size: 16px; font-weight: 500; color: #fff; line-height: 1.25; }
+  .a-now {
+    background: rgba(79,142,247,0.1);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    margin: 0 -4px 0 -4px;
+    padding: 2px 4px 2px 8px;
+  }
+  .no-msg { font-size: 14px; color: var(--muted); font-style: italic; padding: 8px 0; }
+
+  /* ── MELDINGEN (compact) ── */
+  #msg-card {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(160deg, #131a26 0%, #141820 100%);
+    border-color: rgba(79,142,247,0.15);
+  }
+  #msg-card .label { color: var(--accent); }
+  #msg-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    overflow-y: auto;
+    max-height: 100px;
+  }
+  .msg-item {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 6px 10px;
+    animation: slideIn 0.3s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(8px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .msg-text { font-size: 13px; color: var(--text); line-height: 1.3; }
+  .msg-meta { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); margin-top: 3px; }
+  #ntfy-info { font-size: 11px; color: var(--muted); margin-top: 6px; }
+  #ntfy-info code { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--accent); word-break: break-all; }
+
+  /* ── LICHTEN ── */
+  #lights-card {
+    grid-column: 1 / 3;
+    padding: 14px 16px 16px;
+    background: linear-gradient(160deg, #1c1a10 0%, #141820 100%);
+    border-color: rgba(251,191,36,0.2);
+  }
+  #lights-card .label { color: var(--warm); }
+  #lights-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .light-unit {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 10px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .light-unit.on {
+    border-color: rgba(251,191,36,0.5);
+    background: rgba(251,191,36,0.07);
+    box-shadow: 0 0 18px rgba(251,191,36,0.09);
+  }
+  .bulb-icon {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    font-size: 20px;
+  }
+  .light-unit.on .bulb-icon {
+    border-color: var(--warm);
+    background: rgba(251,191,36,0.18);
+    box-shadow: 0 0 16px rgba(251,191,36,0.38);
+  }
+  .light-name { font-size: 13px; color: var(--muted); text-align: center; font-weight: 500; }
+  .light-unit.on .light-name { color: var(--warm); }
+  .slider-row { display: flex; align-items: center; gap: 6px; width: 100%; padding: 0 2px; }
+  .dim-slider {
+    -webkit-appearance: none; appearance: none;
+    flex: 1; height: 4px; border-radius: 2px;
+    background: var(--border); outline: none; cursor: pointer;
+  }
+  .light-unit.on .dim-slider {
+    background: linear-gradient(to right, var(--warm) 0%, var(--warm) var(--pct,80%), rgba(255,255,255,0.1) var(--pct,80%));
+  }
+  .dim-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--warm); cursor: pointer; opacity: 0; transition: opacity 0.2s;
+  }
+  .light-unit.on .dim-slider::-webkit-slider-thumb { opacity: 1; }
+  .dim-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 28px; text-align: right; }
+  .light-unit.on .dim-pct { color: var(--warm); }
+  .light-unit:not(.on) .slider-row { opacity: 0.25; pointer-events: none; }
+
+  #lights-footer {
+    display: flex; align-items: center; justify-content: space-between; margin-top: 10px;
+  }
+  #hue-status { font-size: 12px; font-family: 'DM Mono', monospace; color: var(--muted); }
+  #gh-link {
+    display: flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, rgba(66,133,244,0.18), rgba(66,133,244,0.08));
+    border: 1px solid rgba(66,133,244,0.35);
+    border-radius: 10px; color: #8ab4f8;
+    font-size: 15px; font-weight: 500;
+    padding: 10px 18px;
+    cursor: pointer; text-decoration: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  #gh-link:active {
+    background: rgba(66,133,244,0.25);
+    border-color: rgba(66,133,244,0.6);
+  }
+
+  #msg-list::-webkit-scrollbar { width: 3px; }
+  #msg-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* config */
+  #config-btn {
+    position: fixed; bottom: 14px; right: 14px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--muted); font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; z-index: 100;
+  }
+  #config-panel {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75); z-index: 200;
+    align-items: center; justify-content: center;
+  }
+  #config-panel.open { display: flex; }
+  #config-inner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; width: 360px;
+    max-width: 92vw; max-height: 90vh; overflow-y: auto;
+  }
+  #config-inner h2 { font-size: 17px; font-weight: 500; margin-bottom: 16px; }
+  .cfg-row { margin-bottom: 13px; }
+  .cfg-row label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 5px; font-family: 'DM Mono', monospace; }
+  .cfg-row input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 9px 11px; color: var(--text);
+    font-size: 14px; font-family: 'DM Mono', monospace; outline: none;
+  }
+  .cfg-row input:focus { border-color: var(--accent); }
+  .cfg-save {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px;
+    padding: 11px 18px; font-size: 14px; font-weight: 500; cursor: pointer; width: 100%; margin-top: 4px;
+  }
+  .cfg-cancel { display: block; text-align: center; font-size: 13px; color: var(--muted); margin-top: 12px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- TOP: CLOCK + WEATHER -->
+  <div id="top">
+    <div id="clock-block">
+      <div id="time">--:--</div>
+      <div id="date-str">laden…</div>
+    </div>
+    <div id="weather-block">
+      <div id="weather-icon">☁️</div>
+      <div id="weather-right">
+        <div id="weather-temp">--°</div>
+        <div id="weather-desc">laden…</div>
+        <div id="weather-extra"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RAIN RADAR -->
+  <div class="card" id="radar-card">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div class="label" style="margin-bottom:0;color:var(--rain)">Neerslag komend uur</div>
+      <div id="radar-status">laden…</div>
+    </div>
+    <div id="radar-inner"></div>
+    <div id="radar-times"></div>
+  </div>
+
+  <!-- AGENDA -->
+  <div class="card" id="agenda-card">
+    <div class="label">Agenda</div>
+    <div id="agenda-list"><div class="no-msg">Agenda laden…</div></div>
+  </div>
+
+  <!-- MELDINGEN (compact) -->
+  <div class="card" id="msg-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <div class="label" style="margin-bottom:0">Meldingen</div>
+      <span onclick="clearMessages()" style="font-size:12px;color:var(--muted);cursor:pointer">wis</span>
+    </div>
+    <div id="msg-list"><div class="no-msg">Nog geen meldingen</div></div>
+    <div id="ntfy-info">via: <code id="ntfy-channel-display">⚙️</code></div>
+  </div>
+
+  <!-- LICHTEN -->
+  <div class="card" id="lights-card">
+    <div class="label">Verlichting</div>
+    <div id="lights-grid"></div>
+    <div id="lights-footer">
+      <span id="hue-status">Hue: stel in via ⚙️</span>
+      <a id="gh-link" href="https://home.google.com" target="_blank" onclick="openGH(event)">
+        🏠 Andere lampen (Google Home)
+      </a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Config knop -->
+<div id="config-btn" onclick="openConfig()">⚙</div>
+
+<!-- Config panel -->
+<div id="config-panel">
+  <div id="config-inner">
+    <h2>⚙ Instellingen</h2>
+    <div class="cfg-row">
+      <label>Stad (voor weer)</label>
+      <input id="cfg-city" type="text" placeholder="Schiedam" />
+    </div>
+    <div class="cfg-row">
+      <label>Google Agenda iCal URL</label>
+      <input id="cfg-ical" type="text" placeholder="https://calendar.google.com/calendar/ical/…" />
+    </div>
+    <div class="cfg-row">
+      <label>ntfy kanaal</label>
+      <input id="cfg-ntfy" type="text" placeholder="keuken-abc123" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue Bridge IP</label>
+      <input id="cfg-hue-ip" type="text" placeholder="192.168.1.29" />
+    </div>
+    <div class="cfg-row">
+      <label>Philips Hue API Token</label>
+      <input id="cfg-hue-token" type="text" placeholder="lange token" />
+    </div>
+    <button class="cfg-save" onclick="saveConfig()">Opslaan &amp; herladen</button>
+    <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────
+const CFG_KEY = 'dashboard_cfg';
+let cfg = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+if (!cfg.ntfy) cfg.ntfy = 'keuken-' + Math.random().toString(36).slice(2,8);
+if (!cfg.city) cfg.city = 'Schiedam';
+saveLocalCfg();
+
+function saveLocalCfg() { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); }
+
+function openConfig() {
+  document.getElementById('cfg-city').value      = cfg.city     || '';
+  document.getElementById('cfg-ical').value      = cfg.ical     || '';
+  document.getElementById('cfg-ntfy').value      = cfg.ntfy     || '';
+  document.getElementById('cfg-hue-ip').value    = cfg.hueIp    || '';
+  document.getElementById('cfg-hue-token').value = cfg.hueToken || '';
+  document.getElementById('config-panel').classList.add('open');
+}
+function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
+function saveConfig() {
+  cfg.city     = document.getElementById('cfg-city').value.trim();
+  cfg.ical     = document.getElementById('cfg-ical').value.trim();
+  cfg.ntfy     = document.getElementById('cfg-ntfy').value.trim();
+  cfg.hueIp    = document.getElementById('cfg-hue-ip').value.trim();
+  cfg.hueToken = document.getElementById('cfg-hue-token').value.trim();
+  saveLocalCfg();
+  closeConfig();
+  initAll();
+}
+
+// ─── CLOCK ──────────────────────────────────────────────────────────
+const DAYS   = ['Zondag','Maandag','Dinsdag','Woensdag','Donderdag','Vrijdag','Zaterdag'];
+const MONTHS = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+function pad(n){ return String(n).padStart(2,'0'); }
+function updateClock() {
+  const now = new Date();
+  document.getElementById('time').textContent = pad(now.getHours())+':'+pad(now.getMinutes());
+  document.getElementById('date-str').textContent =
+    DAYS[now.getDay()]+' '+now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ─── WEATHER ────────────────────────────────────────────────────────
+const weatherIcons = {
+  0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',
+  51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',
+  71:'❄️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',
+  95:'⛈️',96:'⛈️',99:'⛈️'
+};
+const weatherDesc = {
+  0:'Helder',1:'Licht bewolkt',2:'Gedeeltelijk bewolkt',3:'Bewolkt',
+  45:'Mist',48:'Mist',51:'Lichte motregen',53:'Motregen',55:'Zware motregen',
+  61:'Lichte regen',63:'Regen',65:'Zware regen',71:'Lichte sneeuw',73:'Sneeuw',
+  75:'Zware sneeuw',80:'Regenbuien',81:'Regenbuien',82:'Zware buien',
+  95:'Onweer',96:'Onweer',99:'Zwaar onweer'
+};
+
+async function loadWeather() {
+  try {
+    const city = encodeURIComponent(cfg.city || 'Schiedam');
+    const geo = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${city}&count=1&language=nl&format=json`);
+    const gd = await geo.json();
+    if (!gd.results || !gd.results.length) return;
+    const { latitude: lat, longitude: lon } = gd.results[0];
+
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&timezone=Europe%2FAmsterdam&forecast_days=1`);
+    const d = await r.json();
+    const c = d.current;
+    const code = c.weathercode;
+
+    document.getElementById('weather-icon').textContent = weatherIcons[code] || '🌡️';
+    document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m)+'°';
+    document.getElementById('weather-desc').textContent = weatherDesc[code] || 'Onbekend';
+    document.getElementById('weather-extra').textContent = `💨 ${Math.round(c.windspeed_10m)} km/u · 💧 ${c.relativehumidity_2m}%`;
+    buildRadar(d.hourly);
+  } catch(e) {
+    document.getElementById('weather-desc').textContent = 'Geen verbinding';
+  }
+}
+
+function buildRadar(hourly) {
+  const now = new Date();
+  const nowHour = now.getHours();
+  const bars  = document.getElementById('radar-inner');
+  const times = document.getElementById('radar-times');
+  bars.innerHTML = ''; times.innerHTML = '';
+
+  const hours    = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
+  const relevant = hours.filter(h => h.h >= nowHour && h.h < nowHour+6);
+  if (!relevant.length) return;
+
+  const maxP   = Math.max(...relevant.map(h => h.p), 0.5);
+  let anyRain  = false;
+
+  relevant.forEach((h, i) => {
+    const pct = Math.min(100, (h.p / maxP) * 100);
+    const bar = document.createElement('div');
+    bar.className = 'rbar';
+    bar.style.cssText = `height:${Math.max(4,pct*0.4)}px;background:${h.p>1?'#4f8ef7':h.p>0.2?'#67b2fa':'#2d3748'};opacity:${h.p>0?0.9:0.2}`;
+    bars.appendChild(bar);
+    if (h.p > 0.1) anyRain = true;
+
+    if (i === 0 || i === relevant.length-1 || i === Math.floor(relevant.length/2)) {
+      const span = document.createElement('span');
+      span.textContent = pad(h.h)+':00';
+      span.style.flex = '1';
+      if (i === relevant.length-1) span.style.textAlign = 'right';
+      if (i > 0 && i < relevant.length-1) span.style.textAlign = 'center';
+      times.appendChild(span);
+    }
+  });
+
+  const st = document.getElementById('radar-status');
+  st.textContent = anyRain ? '🌧 regen verwacht' : '✓ droog';
+  st.style.color = anyRain ? 'var(--rain)' : 'var(--accent2)';
+}
+
+// ─── LICHTEN (Philips Hue API) ──────────────────────────────────────
+let hueGroups   = [];
+let hueConnected = false;
+
+function hueBase() { return `https://${cfg.hueIp}/api/${cfg.hueToken}`; }
+
+function setHueStatus(msg, ok) {
+  const el = document.getElementById('hue-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = ok ? 'var(--accent2)' : 'var(--muted)';
+}
+
+async function loadHueLights() {
+  if (!cfg.hueIp || !cfg.hueToken) {
+    setHueStatus('Hue: stel in via ⚙️', false);
+    buildLightsFallback();
+    return;
+  }
+  try {
+    const r = await fetch(`${hueBase()}/groups`);
+    if (!r.ok) throw new Error('http ' + r.status);
+    const data = await r.json();
+
+    hueGroups = Object.entries(data)
+      .filter(([, g]) => ['Room','Zone','LightGroup'].includes(g.type))
+      .map(([id, g]) => ({
+        id, name: g.name,
+        on:  g.action.on,
+        bri: g.action.bri != null ? Math.round(g.action.bri / 2.54) : 100,
+        type: 'group'
+      }));
+
+    if (!hueGroups.length) {
+      const lr = await fetch(`${hueBase()}/lights`);
+      const ld = await lr.json();
+      hueGroups = Object.entries(ld).map(([id, l]) => ({
+        id, name: l.name,
+        on:  l.state.on,
+        bri: Math.round(l.state.bri / 2.54),
+        type: 'light'
+      }));
+    }
+
+    hueConnected = true;
+    setHueStatus(`Hue ✓ · ${hueGroups.length} kamers`, true);
+    buildLightsHue();
+  } catch(e) {
+    hueConnected = false;
+    setHueStatus('Hue: geen verbinding', false);
+    buildLightsFallback();
+  }
+}
+
+function buildLightsHue() {
+  const grid = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${Math.min(Math.max(hueGroups.length,1),6)}, 1fr)`;
+  hueGroups.forEach(group => {
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (group.on ? ' on' : '');
+    unit.id = 'light-' + group.id;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${group.name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${group.bri}" step="1"
+          oninput="onHueDim('${group.id}','${group.type}',this)"
+          onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${group.id}">${group.bri}%</div>
+      </div>`;
+    unit.addEventListener('click', () => toggleHueLight(group.id, group.type));
+    unit.addEventListener('touchend', e => { e.preventDefault(); toggleHueLight(group.id, group.type); });
+    grid.appendChild(unit);
+    updateSliderGrad(group.id, group.bri);
+  });
+}
+
+async function toggleHueLight(id, type) {
+  const group = hueGroups.find(g => g.id === id);
+  if (!group) return;
+  const newOn = !group.on;
+  group.on = newOn;
+  const unit = document.getElementById('light-' + id);
+  if (unit) unit.classList.toggle('on', newOn);
+  try {
+    const ep = type === 'group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
+    await fetch(ep, { method: 'PUT', body: JSON.stringify({ on: newOn }) });
+  } catch(e) {
+    group.on = !newOn;
+    if (unit) unit.classList.toggle('on', !newOn);
+  }
+}
+
+async function onHueDim(id, type, slider) {
+  const pct = parseInt(slider.value);
+  const group = hueGroups.find(g => g.id === id);
+  if (group) { group.bri = pct; group.on = true; }
+  const el = document.getElementById('pct-' + id);
+  if (el) el.textContent = pct + '%';
+  updateSliderGrad(id, pct);
+  const unit = document.getElementById('light-' + id);
+  if (unit) unit.classList.add('on');
+  try {
+    const ep = type === 'group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
+    await fetch(ep, { method: 'PUT', body: JSON.stringify({ on: true, bri: Math.max(1, Math.round(pct * 2.54)) }) });
+  } catch(e) {}
+}
+
+let lightStates = {};
+function buildLightsFallback() {
+  const names = ['Keuken','Woonkamer','Slaapkamer','Hal','Buiten'];
+  const grid  = document.getElementById('lights-grid');
+  grid.innerHTML = '';
+  grid.style.gridTemplateColumns = `repeat(${names.length}, 1fr)`;
+  names.forEach(name => {
+    if (!lightStates[name]) lightStates[name] = { on: false, pct: 80 };
+    const st   = lightStates[name];
+    const unit = document.createElement('div');
+    unit.className = 'light-unit' + (st.on ? ' on' : '');
+    unit.id = 'light-' + name;
+    unit.innerHTML = `
+      <div class="bulb-icon">💡</div>
+      <div class="light-name">${name}</div>
+      <div class="slider-row">
+        <input type="range" class="dim-slider" min="1" max="100" value="${st.pct}" step="1"
+          oninput="onDimFb('${name}',this)" onclick="event.stopPropagation()" ontouchstart="event.stopPropagation()">
+        <div class="dim-pct" id="pct-${name}">${st.pct}%</div>
+      </div>`;
+    unit.addEventListener('click', () => { st.on = !st.on; unit.classList.toggle('on', st.on); });
+    unit.addEventListener('touchend', e => { e.preventDefault(); st.on = !st.on; unit.classList.toggle('on', st.on); });
+    grid.appendChild(unit);
+    updateSliderGrad(name, st.pct);
+  });
+}
+function onDimFb(name, slider) {
+  const pct = parseInt(slider.value);
+  if (lightStates[name]) lightStates[name].pct = pct;
+  const el = document.getElementById('pct-' + name);
+  if (el) el.textContent = pct + '%';
+  updateSliderGrad(name, pct);
+}
+
+function buildLights()      { loadHueLights(); }
+function updateSliderGrad(id, pct) {
+  const s = document.querySelector(`#light-${id} .dim-slider`);
+  if (s) s.style.setProperty('--pct', pct+'%');
+}
+function openGH(e) {
+  e.preventDefault();
+  window.location.href = 'https://home.google.com';
+}
+setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
+
+// ─── NTFY MELDINGEN ─────────────────────────────────────────────────
+let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
+let ntfyES   = null;
+
+function updateNtfyInfo() {
+  const ch = cfg.ntfy || '';
+  document.getElementById('ntfy-channel-display').textContent = ch ? `ntfy.sh/${ch}` : '⚙️';
+}
+function clearMessages() {
+  messages = [];
+  localStorage.removeItem('dashboard_msgs');
+  renderMessages();
+}
+function saveMessages() { localStorage.setItem('dashboard_msgs', JSON.stringify(messages.slice(-20))); }
+function renderMessages() {
+  const box = document.getElementById('msg-list');
+  if (!messages.length) { box.innerHTML = '<div class="no-msg">Nog geen meldingen</div>'; return; }
+  box.innerHTML = '';
+  [...messages].reverse().forEach(m => {
+    const d = document.createElement('div');
+    d.className = 'msg-item';
+    d.innerHTML = `<div class="msg-text">${m.text}</div><div class="msg-meta">${m.time} · ntfy</div>`;
+    box.appendChild(d);
+  });
+}
+function startNtfy() {
+  if (ntfyES) { try { ntfyES.close(); } catch(e){} }
+  updateNtfyInfo();
+  renderMessages();
+  if (!cfg.ntfy) return;
+  try {
+    ntfyES = new EventSource(`https://ntfy.sh/${cfg.ntfy}/sse`);
+    ntfyES.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.event === 'message' && data.message) {
+          const now = new Date();
+          messages.push({ text: data.message, time: pad(now.getHours())+':'+pad(now.getMinutes()) });
+          if (messages.length > 20) messages.shift();
+          saveMessages();
+          renderMessages();
+        }
+      } catch(err) {}
+    };
+  } catch(err) {}
+}
+
+// ─── AGENDA (iCal) ──────────────────────────────────────────────────
+const COLORS = ['#4f8ef7','#34d399','#fbbf24','#f472b6','#a78bfa','#fb923c'];
+const DAYS_SHORT = ['zo','ma','di','wo','do','vr','za'];
+const MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+
+function parseIcal(text) {
+  const events = [];
+  text.split('BEGIN:VEVENT').slice(1).forEach(block => {
+    const get = k => { const m = block.match(new RegExp(k+'[^:]*:([^\r\n]+)')); return m ? m[1].trim() : ''; };
+    const summary = get('SUMMARY');
+    const dtstart = get('DTSTART');
+    if (!summary || !dtstart) return;
+
+    const parseDate = s => {
+      if (s.length === 8) return new Date(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8));
+      if (s.includes('T')) {
+        const c = s.replace(/Z$/,'');
+        return new Date(c.slice(0,4)+'-'+c.slice(4,6)+'-'+c.slice(6,8)+'T'+c.slice(9,11)+':'+c.slice(11,13)+':'+c.slice(13,15));
+      }
+      return null;
+    };
+
+    const start = parseDate(dtstart);
+    if (!start) return;
+    events.push({ summary, start, allDay: dtstart.length === 8 });
+  });
+  return events.sort((a,b) => a.start - b.start);
+}
+
+function dayKey(date) {
+  return date.getFullYear()*10000 + date.getMonth()*100 + date.getDate();
+}
+
+function formatDayLabel(date) {
+  const now   = new Date();
+  const today = dayKey(now);
+  const d     = dayKey(date);
+  const diff  = Math.round((d - today) / 100); // rough day offset
+  // Use real day diff
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dateMid  = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const dayDiff  = Math.round((dateMid - todayMid) / 86400000);
+
+  if (dayDiff === 0) return 'Vandaag';
+  if (dayDiff === 1) return 'Morgen';
+  return DAYS_SHORT[date.getDay()] + ' ' + date.getDate() + ' ' + MONTHS_SHORT[date.getMonth()];
+}
+
+async function loadAgenda() {
+  const list = document.getElementById('agenda-list');
+  if (!cfg.ical) {
+    list.innerHTML = '<div class="no-msg">Geen agenda.<br><span style="font-size:12px">Voeg iCal URL toe via ⚙️</span></div>';
+    return;
+  }
+  list.innerHTML = '<div class="no-msg">Laden…</div>';
+  try {
+    const sep = cfg.ical.includes('?') ? '&' : '?';
+    const url = cfg.ical + sep + '_t=' + Date.now();
+    const r   = await fetch('https://corsproxy.io/?url=' + encodeURIComponent(url), { cache: 'no-store' });
+    if (!r.ok) throw new Error('status ' + r.status);
+    const text   = await r.text();
+    const allEvents = parseIcal(text);
+
+    // Filter: vandaag t/m 14 dagen vooruit
+    const now      = new Date();
+    const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate() + 14);
+
+    const upcoming = allEvents.filter(ev => {
+      const evDay = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
+      return evDay >= todayMid && evDay <= cutoff;
+    });
+
+    list.innerHTML = '';
+
+    if (!upcoming.length) {
+      list.innerHTML = '<div class="no-msg">Geen afspraken de komende 2 weken</div>';
+      return;
+    }
+
+    // Groepeer per dag, sla lege dagen over
+    const byDay = new Map();
+    upcoming.forEach(ev => {
+      const k = dayKey(ev.start);
+      if (!byDay.has(k)) byDay.set(k, { date: ev.start, events: [] });
+      byDay.get(k).events.push(ev);
+    });
+
+    let colorIdx = 0;
+    byDay.forEach(({ date, events }) => {
+      const todayKey = dayKey(now);
+      const isToday  = dayKey(date) === todayKey;
+
+      // Dag-header
+      const hdr = document.createElement('div');
+      hdr.className = 'day-header' + (isToday ? ' today' : '');
+      hdr.textContent = formatDayLabel(date);
+      list.appendChild(hdr);
+
+      events.forEach(ev => {
+        const isPast  = !ev.allDay && ev.start < now;
+        const isNow   = !ev.allDay && Math.abs(ev.start - now) < 30*60*1000;
+        const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
+        const color   = COLORS[colorIdx++ % COLORS.length];
+
+        const div = document.createElement('div');
+        div.className = 'agenda-item' + (isNow ? ' a-now' : '');
+        div.style.opacity = isPast ? '0.38' : '1';
+        div.innerHTML = `
+          <div class="a-dot" style="background:${color}"></div>
+          <div class="a-time">${timeStr}</div>
+          <div class="a-title">${ev.summary}</div>`;
+        list.appendChild(div);
+      });
+    });
+  } catch(e) {
+    list.innerHTML = '<div class="no-msg" style="font-size:12px">Agenda niet bereikbaar.<br>Controleer de iCal URL in ⚙️</div>';
+  }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────
+function initAll() {
+  buildLights();
+  startNtfy();
+  loadWeather();
+  loadAgenda();
+}
+
+initAll();
+setInterval(loadWeather, 10*60*1000);
+setInterval(loadAgenda,   5*60*1000);
+
+async function keepAwake() {
+  if ('wakeLock' in navigator) { try { await navigator.wakeLock.request('screen'); } catch(e) {} }
+}
+keepAwake();
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+</script>
+</body>
+</html>
