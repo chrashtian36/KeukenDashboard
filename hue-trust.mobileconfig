@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>PayloadContent</key>
+  <array>
+    <dict>
+      <key>PayloadCertificateFileName</key>
+      <string>hue-bridge.cer</string>
+      <key>PayloadContent</key>
+      <data>MIICPTCCAeSgAwIBAgIJAOy1+v/+q5jwMAoGCCqGSM49BAMCMDkxCzAJBgNVBAYTAk5MMRQwEgYDVQQKDAtQaGlsaXBzIEh1ZTEUMBIGA1UEAwwLcm9vdC1icmlkZ2UwIhgPMjAxNzAxMDEwMDAwMDBaGA8yMDM4MDExOTAzMTQwN1owPjELMAkGA1UEBhMCTkwxFDASBgNVBAoMC1BoaWxpcHMgSHVlMRkwFwYDVQQDDBBlY2I1ZmFmZmZlYWI5OGYwMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEydo1lVrwjpXjGUXuHvj79a+2RXTL2Hzx2yDranAsNFGoKu3Ay0PrPuV0dpRrfpY2UDns6nkZHAdXz8IpRz/7+6OByzCByDAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDATBgNVHSUEDDAKBggrBgEFBQcDATAdBgNVHQ4EFgQUXW70HpKawI9gLUBLePmDkLusgRQwdAYDVR0jBG0wa4AUZ2ONTFrDT6o8ItRnKfqWKnHFGmShPaQ7MDkxCzAJBgNVBAYTAk5MMRQwEgYDVQQKDAtQaGlsaXBzIEh1ZTEUMBIGA1UEAwwLcm9vdC1icmlkZ2WCFDuxUi22sYpLlwJY81Wrqy11phcOMAoGCCqGSM49BAMCA0cAMEQCIB8IOra1x42QlBxtNC/M/A0n+UCV9HqcnI/gU33dD80AAiAfK1Tp644m7xeFzHIkf9IcKPqHkkY2pkcnkzN29Gj+nQ==</data>
+      <key>PayloadDescription</key>
+      <string>Philips Hue Bridge certificaat</string>
+      <key>PayloadDisplayName</key>
+      <string>Philips Hue Bridge</string>
+      <key>PayloadIdentifier</key>
+      <string>com.keukendash.hue-bridge</string>
+      <key>PayloadType</key>
+      <string>com.apple.security.root</string>
+      <key>PayloadUUID</key>
+      <string>A1B2C3D4-E5F6-7890-ABCD-EF1234567890</string>
+      <key>PayloadVersion</key>
+      <integer>1</integer>
+    </dict>
+  </array>
+  <key>PayloadDescription</key>
+  <string>Vertrouw de Philips Hue Bridge voor KeukenDash</string>
+  <key>PayloadDisplayName</key>
+  <string>KeukenDash Hue Bridge</string>
+  <key>PayloadIdentifier</key>
+  <string>com.keukendash.hue-profile</string>
+  <key>PayloadType</key>
+  <string>Configuration</string>
+  <key>PayloadUUID</key>
+  <string>B2C3D4E5-F6A7-8901-BCDE-F12345678901</string>
+  <key>PayloadVersion</key>
+  <integer>1</integer>
+</dict>
+</plist>
