@@ -805,9 +805,16 @@ async function loadAgenda() {
     // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
     const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
 
-    // Haal alle agenda's parallel op — probeer twee proxies
+    // Haal rooster op van lokaal bestand (via GitHub Action opgehaald)
     const allEvents = [];
+    try {
+      const rr = await fetch('rooster.ics?_t=' + Date.now(), { cache: 'no-store' });
+      if (rr.ok) { const rt = await rr.text(); allEvents.push(...parseIcal(rt)); }
+    } catch(e) {}
+
+    // Haal overige agenda's op via proxies
     await Promise.all(urls.map(async icalUrl => {
+      if (icalUrl.includes('gemivasvg')) return; // wordt al via rooster.ics geladen
       try {
         const bust = (icalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
         const encoded = encodeURIComponent(icalUrl + bust);
@@ -815,7 +822,8 @@ async function loadAgenda() {
         let text = null;
         for (const proxy of [
           `https://api.allorigins.win/raw?url=${encoded}`,
-          `https://corsproxy.io/?url=${encoded}`
+          `https://corsproxy.io/?url=${encoded}`,
+          `https://api.codetabs.com/v1/proxy?quest=${encoded}`
         ]) {
           try {
             const ctrl = new AbortController();

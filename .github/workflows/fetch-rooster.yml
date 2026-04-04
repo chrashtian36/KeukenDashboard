@@ -1,0 +1,28 @@
+name: Rooster ophalen
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # elk uur
+  workflow_dispatch:       # handmatig starten
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rooster ophalen
+        run: |
+          curl -sf -m 30 \
+            'https://gemivasvg.aysist7.nl/ical/e5272043-fd47-4464-90f3-37348280d608/calendar.ics' \
+            -o rooster.ics
+
+      - name: Commit als er wijzigingen zijn
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add rooster.ics
+          git diff --cached --quiet || git commit -m "Rooster bijgewerkt $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git push
