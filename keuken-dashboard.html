@@ -572,7 +572,8 @@ function buildRadar(hourly) {
 
 // ─── LICHTEN (Philips Hue) ───────────────────────────────────────────
 let hueGroups = [], hueConnected = false;
-function hueBase() { return `https://${cfg.hueIp}/api/${cfg.hueToken}`; }
+let hueProto = 'https';
+function hueBase() { return `${hueProto}://${cfg.hueIp}/api/${cfg.hueToken}`; }
 
 function setHueStatus(msg, ok) {
   const el = document.getElementById('hue-status');
@@ -582,7 +583,14 @@ function setHueStatus(msg, ok) {
 async function loadHueLights() {
   if (!cfg.hueIp || !cfg.hueToken) { setHueStatus('Hue: stel in via ⚙️', false); buildLightsFallback(); return; }
   try {
-    const r = await fetch(`${hueBase()}/groups`);
+    let r;
+    try {
+      r = await fetch(`${hueBase()}/groups`);
+    } catch(e) {
+      // HTTPS faalt (mixed content) → probeer HTTP
+      hueProto = 'http';
+      r = await fetch(`${hueBase()}/groups`);
+    }
     if (!r.ok) throw new Error();
     const data = await r.json();
     hueGroups = Object.entries(data)
