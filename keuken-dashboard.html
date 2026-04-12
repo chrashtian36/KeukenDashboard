@@ -947,7 +947,7 @@ function renderAgenda(upcoming) {
   const now = new Date();
   const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   list.innerHTML = '';
-  if (!upcoming.length) { list.innerHTML='<div class="no-msg">Geen afspraken komende 2 weken</div>'; return; }
+  if (!upcoming.length) { list.innerHTML='<div class="no-msg">Geen afspraken komende 4 weken</div>'; return; }
 
   const byDay = new Map();
   upcoming.forEach(ev => {
@@ -1001,6 +1001,73 @@ function loadAgendaCache() {
   } catch(e) { return null; }
 }
 
+// ── Nederlandse feestdagen ──
+function easterSunday(year) {
+  // Meeus/Jones/Butcher algoritme
+  const a=year%19, b=Math.floor(year/100), c=year%100;
+  const d=Math.floor(b/4), e=b%4, f=Math.floor((b+8)/25);
+  const g=Math.floor((b-f+1)/3), h=(19*a+b-d-g+15)%30;
+  const i=Math.floor(c/4), k=c%4, l=(32+2*e+2*i-h-k)%7;
+  const m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31)-1, day=((h+l-7*m+114)%31)+1;
+  return new Date(year, month, day);
+}
+
+function getDutchHolidays(year) {
+  const e = easterSunday(year);
+  const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+  let koningsdag = new Date(year, 3, 27);
+  if (koningsdag.getDay() === 0) koningsdag = new Date(year, 3, 26); // zo → za
+  return [
+    { date: new Date(year, 0, 1),    name: 'Nieuwjaarsdag' },
+    { date: addDays(e, -2),          name: 'Goede Vrijdag' },
+    { date: e,                       name: 'Eerste Paasdag' },
+    { date: addDays(e, 1),           name: 'Tweede Paasdag' },
+    { date: koningsdag,              name: 'Koningsdag' },
+    { date: new Date(year, 4, 5),    name: 'Bevrijdingsdag' },
+    { date: addDays(e, 39),          name: 'Hemelvaartsdag' },
+    { date: addDays(e, 49),          name: 'Eerste Pinksterdag' },
+    { date: addDays(e, 50),          name: 'Tweede Pinksterdag' },
+    { date: new Date(year, 11, 25),  name: 'Eerste Kerstdag' },
+    { date: new Date(year, 11, 26),  name: 'Tweede Kerstdag' },
+    { date: nthWeekday(year, 4, 0, 2), name: 'Moederdag' },
+    { date: nthWeekday(year, 5, 0, 3), name: 'Vaderdag' },
+  ];
+}
+
+// n-de weekdag in een maand (0=zo, 1=ma, …); n=1 → eerste, n=-1 → laatste
+function nthWeekday(year, month, weekday, n) {
+  if (n > 0) {
+    const first = new Date(year, month, 1);
+    let day = 1 + ((weekday - first.getDay() + 7) % 7) + (n - 1) * 7;
+    return new Date(year, month, day);
+  }
+  // laatste
+  const last = new Date(year, month + 1, 0);
+  let day = last.getDate() - ((last.getDay() - weekday + 7) % 7);
+  return new Date(year, month, day);
+}
+
+function getMadagascarHolidays(year) {
+  const e = easterSunday(year);
+  const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+  return [
+    { date: new Date(year, 0, 1),    name: 'Taom-baovao (Nieuwjaar)' },
+    { date: new Date(year, 2, 8),    name: 'Vrouwendag' },
+    { date: new Date(year, 2, 29),   name: 'Martelarendag' },
+    { date: addDays(e, 1),           name: 'Alatsinain\'ny Paska' },
+    { date: new Date(year, 4, 1),    name: 'Dag van de Arbeid' },
+    { date: addDays(e, 39),          name: 'Hemelvaart' },
+    { date: addDays(e, 50),          name: 'Tweede Pinksterdag' },
+    { date: new Date(year, 5, 26),   name: 'Onafhankelijkheidsdag' },
+    { date: new Date(year, 7, 15),   name: 'Maria-Hemelvaart' },
+    { date: new Date(year, 10, 1),   name: 'Allerheiligen' },
+    { date: new Date(year, 11, 25),  name: 'Kerstdag' },
+    { date: nthWeekday(year, 4, 0, -1), name: 'Moederdag' },
+    { date: nthWeekday(year, 5, 0, 3),  name: 'Vaderdag' },
+  ];
+}
+
 async function loadAgenda() {
   const list = document.getElementById('agenda-list');
   if (!cfg.ical) {
@@ -1029,36 +1096,53 @@ async function loadAgenda() {
     await Promise.all(urls.map(async icalUrl => {
       if (icalUrl.includes('gemivasvg')) return; // wordt al via rooster.ics geladen
       try {
-        const bust = (icalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
-        const encoded = encodeURIComponent(icalUrl + bust);
-        // Probeer eerst allorigins, dan corsproxy als fallback
         let text = null;
-        for (const proxy of [
+        const encoded = encodeURIComponent(icalUrl);
+
+        // Probeer direct (werkt soms op lokaal netwerk / als CORS open staat)
+        const attempts = [
+          icalUrl,
           `https://api.allorigins.win/raw?url=${encoded}`,
-          `https://corsproxy.io/?url=${encoded}`,
+          `https://corsproxy.io/?${encoded}`,
           `https://api.codetabs.com/v1/proxy?quest=${encoded}`
-        ]) {
+        ];
+
+        for (const url of attempts) {
           try {
             const ctrl = new AbortController();
             const timer = setTimeout(() => ctrl.abort(), 8000);
-            const r = await fetch(proxy, { cache: 'no-store', signal: ctrl.signal });
+            const r = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
             clearTimeout(timer);
-            if (r.ok) { text = await r.text(); break; }
+            if (!r.ok) continue;
+            const body = await r.text();
+            // Valideer dat het daadwerkelijk iCal-data is
+            if (body.includes('BEGIN:VCALENDAR')) { text = body; break; }
           } catch(e) {}
         }
-        if (!text) return;
+        if (!text) { console.warn('Agenda niet bereikbaar:', icalUrl.slice(0,60)+'…'); return; }
         const events = parseIcal(text);
         allEvents.push(...events);
       } catch(e) {}
     }));
 
+    // Voeg Nederlandse feestdagen toe
+    const now      = new Date();
+    const thisYear = now.getFullYear();
+    [thisYear, thisYear + 1].forEach(y => {
+      getDutchHolidays(y).forEach(h => {
+        allEvents.push({ summary: '🇳🇱 ' + h.name, start: h.date, allDay: true, isHoliday: true });
+      });
+      getMadagascarHolidays(y).forEach(h => {
+        allEvents.push({ summary: '🇲🇬 ' + h.name, start: h.date, allDay: true, isHoliday: true });
+      });
+    });
+
     // Groepeer nachtdiensten tot blokken en sorteer
     const grouped = groupNachtdiensten(allEvents);
     grouped.sort((a, b) => a.start - b.start);
 
-    const now      = new Date();
     const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+14);
+    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+28);
 
     const upcoming = grouped.filter(ev => {
       const d = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
