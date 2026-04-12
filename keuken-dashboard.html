@@ -622,8 +622,10 @@ function buildRadar(hourly) {
   const scale = document.getElementById('radar-scale');
   bars.innerHTML = ''; times.innerHTML = ''; scale.innerHTML = '';
 
-  const hours = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
-  const relevant = hours.filter(h => h.h >= nowHour && h.h < nowHour+6);
+  const nowMs = now.getTime();
+  const endMs = nowMs + 6 * 3600000;
+  const hours = hourly.time.map((t,i) => ({ dt: new Date(t), h: new Date(t).getHours(), p: hourly.precipitation[i] }));
+  const relevant = hours.filter(h => h.dt.getTime() >= nowMs && h.dt.getTime() < endMs);
   if (!relevant.length) return;
 
   // Schaal berekenen: gebruik mooie stappen
