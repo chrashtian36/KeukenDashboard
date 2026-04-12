@@ -801,6 +801,66 @@ function openGH(e) {
 }
 setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
 
+// ─── DAGELIJKSE QUOTE ───────────────────────────────────────────────
+const QUOTE_FALLBACKS = [
+  { text: 'Het leven is wat je overkomt terwijl je druk bent met andere plannen maken.', author: 'John Lennon' },
+  { text: 'De enige manier om geweldig werk te doen, is houden van wat je doet.', author: 'Steve Jobs' },
+  { text: 'Wees de verandering die je in de wereld wilt zien.', author: 'Gandhi' },
+  { text: 'Elk moment is een nieuw begin.', author: 'T.S. Eliot' },
+  { text: 'Niet alles wat telt kan geteld worden, en niet alles wat geteld wordt, telt.', author: 'Einstein' },
+  { text: 'De beste tijd om een boom te planten was 20 jaar geleden. De op één na beste tijd is nu.', author: 'Chinees spreekwoord' },
+  { text: 'Geluk is geen bestemming, maar een manier van reizen.', author: 'Margaret Lee Runbeck' },
+  { text: 'In het midden van moeilijkheden liggen kansen.', author: 'Einstein' },
+  { text: 'Je hoeft niet geweldig te zijn om te beginnen, maar je moet beginnen om geweldig te worden.', author: 'Zig Ziglar' },
+  { text: 'Wat achter ons ligt en wat voor ons ligt is niets vergeleken met wat in ons ligt.', author: 'Ralph Waldo Emerson' },
+  { text: 'Het geheim van vooruitgang is beginnen.', author: 'Mark Twain' },
+  { text: 'Doe vandaag iets waar je toekomstige zelf je dankbaar voor zal zijn.', author: 'Sean Patrick Flanery' },
+  { text: 'De weg van duizend mijl begint met één stap.', author: 'Lao Tzu' },
+  { text: 'Niet de sterkste overleeft, maar degene die zich het best aanpast.', author: 'Charles Darwin' },
+  { text: 'Alles wat je kunt voorstellen is echt.', author: 'Pablo Picasso' },
+  { text: 'Het leven krimpt of dijt uit in verhouding tot je moed.', author: 'Anaïs Nin' },
+  { text: 'Vriendelijkheid is een taal die doven kunnen horen en blinden kunnen zien.', author: 'Mark Twain' },
+  { text: 'Wie zijn best doet, hoeft niet bang te zijn voor het resultaat.', author: 'Nederlands spreekwoord' },
+  { text: 'De wereld heeft genoeg voor ieders behoefte, maar niet voor ieders hebzucht.', author: 'Gandhi' },
+  { text: 'Geduld is niet het vermogen om te wachten, maar het vermogen om een goed humeur te bewaren tijdens het wachten.', author: 'Joyce Meyer' },
+  { text: 'Kennis is weten dat een tomaat een vrucht is. Wijsheid is het niet in een fruitsalade doen.', author: 'Miles Kington' },
+  { text: 'Het is niet de berg die we bedwingen — we bedwingen onszelf.', author: 'Edmund Hillary' },
+  { text: 'Een schip in de haven is veilig, maar daar zijn schepen niet voor gebouwd.', author: 'John A. Shedd' },
+  { text: 'Het leven is kort. Lach wanneer je kunt, verontschuldig je als je moet, en laat los wat je niet kunt veranderen.', author: 'Onbekend' },
+  { text: 'Succes is niet definitief, falen is niet fataal — het is de moed om door te gaan die telt.', author: 'Winston Churchill' },
+  { text: 'Wees niet bang om langzaam te gaan, wees alleen bang om stil te staan.', author: 'Chinees spreekwoord' },
+  { text: 'De mooiste dingen in het leven zijn geen dingen.', author: 'Onbekend' },
+  { text: 'Hoe je iets doet, is hoe je alles doet.', author: 'Zen wijsheid' },
+  { text: 'Dankbaarheid verandert wat we hebben in genoeg.', author: 'Aesop' },
+  { text: 'Laat je niet ontmoedigen. Het is vaak de laatste sleutel aan de bos die het slot opent.', author: 'Paulo Coelho' },
+  { text: 'Het leven wordt niet gemeten aan het aantal ademhalingen, maar aan de momenten die je adem benemen.', author: 'Maya Angelou' },
+];
+
+let dailyQuote = null;
+
+async function loadDailyQuote() {
+  // Probeer zenquotes API
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    const r = await fetch('https://zenquotes.io/api/today', { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (r.ok) {
+      const data = await r.json();
+      if (data && data[0] && data[0].q) {
+        dailyQuote = { text: data[0].q, author: data[0].a };
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // Fallback: kies quote op basis van dag van het jaar
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now - start) / 86400000);
+  dailyQuote = QUOTE_FALLBACKS[dayOfYear % QUOTE_FALLBACKS.length];
+}
+
 // ─── MELDINGEN (ticker) ─────────────────────────────────────────────
 let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
 let ntfyES = null;
@@ -813,9 +873,14 @@ function saveMessages() { localStorage.setItem('dashboard_msgs', JSON.stringify(
 function renderTicker() {
   const inner = document.getElementById('ticker-inner');
   if (!messages.length) {
-    const ch = cfg.ntfy || 'keuken-chrashdash';
-    inner.className = 'no-anim';
-    inner.innerHTML = `<span id="ticker-empty" style="font-size:13px;color:var(--muted);font-style:italic">Nog geen meldingen — stuur via ntfy.sh/${ch}</span>`;
+    if (dailyQuote) {
+      inner.className = 'no-anim';
+      inner.innerHTML = `<span style="font-size:14px;color:#c0c8dc;font-style:italic;padding:0 12px">✨ „${dailyQuote.text}" — <span style="color:var(--accent)">${dailyQuote.author}</span></span>`;
+    } else {
+      const ch = cfg.ntfy || 'keuken-chrashdash';
+      inner.className = 'no-anim';
+      inner.innerHTML = `<span id="ticker-empty" style="font-size:13px;color:var(--muted);font-style:italic">Nog geen meldingen — stuur via ntfy.sh/${ch}</span>`;
+    }
     return;
   }
 
@@ -1161,7 +1226,10 @@ async function loadAgenda() {
 }
 
 // ─── INIT ────────────────────────────────────────────────────────────
-function initAll() { buildLights(); startNtfy(); loadWeather(); loadAgenda(); }
+async function initAll() {
+  await loadDailyQuote();
+  buildLights(); startNtfy(); loadWeather(); loadAgenda();
+}
 initAll();
 setInterval(loadWeather, 10*60*1000);
 setInterval(loadAgenda,   5*60*1000);
