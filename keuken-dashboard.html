@@ -321,6 +321,11 @@
     display: inline-block; padding: 0 16px;
     color: rgba(79,142,247,0.3); font-size: 18px; line-height: 1;
   }
+  .ticker-quote {
+    font-style: italic; font-size: 18px; font-weight: 600;
+    color: #dde0f0;
+    text-shadow: 0 0 20px rgba(179,157,250,0.35);
+  }
   #ticker-empty {
     font-size: 13px; color: var(--muted); font-style: italic;
   }
@@ -872,34 +877,39 @@ function saveMessages() { localStorage.setItem('dashboard_msgs', JSON.stringify(
 
 function renderTicker() {
   const inner = document.getElementById('ticker-inner');
-  if (!messages.length) {
-    if (dailyQuote) {
-      inner.className = 'no-anim';
-      inner.innerHTML = `<span style="font-size:14px;color:#c0c8dc;font-style:italic;padding:0 12px">✨ „${dailyQuote.text}" — <span style="color:var(--accent)">${dailyQuote.author}</span></span>`;
-    } else {
-      const ch = cfg.ntfy || 'keuken-chrashdash';
-      inner.className = 'no-anim';
-      inner.innerHTML = `<span id="ticker-empty" style="font-size:13px;color:var(--muted);font-style:italic">Nog geen meldingen — stuur via ntfy.sh/${ch}</span>`;
-    }
-    return;
+
+  // Bouw items: meldingen + dagelijkse quote gemixed
+  const items = [];
+
+  if (dailyQuote) {
+    items.push(`<span class="ticker-item ticker-quote">
+      <span class="ticker-dot" style="background:var(--purple);box-shadow:0 0 8px var(--purple)"></span>
+      ✨ „${dailyQuote.text}" — <span style="color:var(--purple)">${dailyQuote.author}</span>
+    </span><span class="ticker-sep">·</span>`);
   }
 
-  // Bouw één set items, dupliceer voor naadloze loop
-  const makeItems = () => messages.map(m =>
-    `<span class="ticker-item">
+  messages.forEach(m => {
+    items.push(`<span class="ticker-item">
       <span class="ticker-dot"></span>
       ${m.text}
       <span class="ticker-time">${m.time}</span>
-    </span><span class="ticker-sep">·</span>`
-  ).join('');
+    </span><span class="ticker-sep">·</span>`);
+  });
 
-  const html = makeItems() + makeItems(); // duplicaat voor loop
+  if (!items.length) {
+    const ch = cfg.ntfy || 'keuken-chrashdash';
+    inner.className = 'no-anim';
+    inner.innerHTML = `<span id="ticker-empty" style="font-size:13px;color:var(--muted);font-style:italic">Nog geen meldingen — stuur via ntfy.sh/${ch}</span>`;
+    return;
+  }
+
+  const html = items.join('') + items.join(''); // duplicaat voor loop
   inner.className = '';
   inner.innerHTML = html;
 
-  // Pas animatiesnelheid aan op aantal tekens (ca. 80px/s)
-  const totalChars = messages.reduce((s, m) => s + m.text.length, 0);
-  const duration = Math.max(8, totalChars * 0.25);
+  // Pas animatiesnelheid aan op totale inhoud
+  const totalChars = (dailyQuote ? dailyQuote.text.length : 0) + messages.reduce((s, m) => s + m.text.length, 0);
+  const duration = Math.max(12, totalChars * 0.25);
   inner.style.animationDuration = duration + 's';
 }
 
