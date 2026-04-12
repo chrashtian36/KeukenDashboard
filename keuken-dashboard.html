@@ -84,18 +84,27 @@
     line-height: 1;
   }
   #date-str { font-size: 16px; color: #c0c8dc; margin-top: 5px; font-weight: 400; }
-  #weather-block {
-    display: flex; align-items: center; gap: 16px; flex-shrink: 0;
+  #weather-blocks {
+    display: flex; gap: 10px; flex-shrink: 0;
+  }
+  .weather-block {
+    display: flex; align-items: center; gap: 12px;
     background: rgba(255,255,255,0.04);
     border: 1px solid var(--border);
     border-radius: 14px;
-    padding: 10px 18px;
+    padding: 10px 16px;
+    min-width: 160px;
   }
-  #weather-icon { font-size: 46px; line-height: 1; }
-  #weather-right { text-align: right; }
-  #weather-temp { font-family: 'DM Mono', monospace; font-size: 44px; font-weight: 300; color: #fff; line-height: 1; }
-  #weather-desc { font-size: 15px; color: var(--accent); margin-top: 4px; font-weight: 500; }
-  #weather-extra { font-size: 13px; color: var(--muted); margin-top: 3px; }
+  .weather-block .wb-icon { font-size: 36px; line-height: 1; }
+  .weather-block .wb-right { text-align: right; }
+  .weather-block .wb-label {
+    font-size: 10px; font-family: 'DM Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--muted); margin-bottom: 2px;
+  }
+  .weather-block .wb-temp { font-family: 'DM Mono', monospace; font-size: 34px; font-weight: 300; color: #fff; line-height: 1; }
+  .weather-block .wb-desc { font-size: 13px; color: var(--accent); margin-top: 3px; font-weight: 500; }
+  .weather-block .wb-extra { font-size: 12px; color: var(--muted); margin-top: 2px; }
 
   /* ── RADAR ── */
   #radar-card {
@@ -104,8 +113,24 @@
     background: linear-gradient(135deg, #0f1624 0%, #141820 100%);
     border-color: rgba(96,165,250,0.18);
   }
-  #radar-inner { display: flex; align-items: flex-end; gap: 3px; height: 38px; margin-top: 8px; }
-  .rbar { flex: 1; border-radius: 3px 3px 0 0; min-height: 3px; transition: height 0.6s ease; }
+  #radar-chart { display: flex; align-items: flex-end; gap: 2px; position: relative; margin-top: 8px; }
+  #radar-inner { display: flex; align-items: flex-end; gap: 2px; height: 52px; flex: 1; }
+  #radar-scale {
+    display: flex; flex-direction: column; justify-content: space-between;
+    height: 52px; padding-right: 6px; flex-shrink: 0; min-width: 32px;
+    font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); text-align: right;
+  }
+  .rbar {
+    flex: 1; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.6s ease;
+    position: relative; cursor: default;
+  }
+  .rbar-tip {
+    display: none; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%);
+    font-size: 10px; font-family: 'DM Mono', monospace; color: var(--rain);
+    background: rgba(15,22,36,0.9); border: 1px solid rgba(96,165,250,0.3);
+    border-radius: 4px; padding: 2px 5px; white-space: nowrap; z-index: 5;
+  }
+  .rbar:hover .rbar-tip { display: block; }
   #radar-times { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
   #radar-status { font-size: 13px; font-weight: 500; }
 
@@ -360,12 +385,33 @@
       <div id="time">--:--</div>
       <div id="date-str">laden…</div>
     </div>
-    <div id="weather-block">
-      <div id="weather-icon">☁️</div>
-      <div id="weather-right">
-        <div id="weather-temp">--°</div>
-        <div id="weather-desc">laden…</div>
-        <div id="weather-extra"></div>
+    <div id="weather-blocks">
+      <div class="weather-block" id="wb-now">
+        <div class="wb-icon" id="wb-now-icon">☁️</div>
+        <div class="wb-right">
+          <div class="wb-label">Nu</div>
+          <div class="wb-temp" id="wb-now-temp">--°</div>
+          <div class="wb-desc" id="wb-now-desc">laden…</div>
+          <div class="wb-extra" id="wb-now-extra"></div>
+        </div>
+      </div>
+      <div class="weather-block" id="wb-today">
+        <div class="wb-icon" id="wb-today-icon">☁️</div>
+        <div class="wb-right">
+          <div class="wb-label">Vandaag</div>
+          <div class="wb-temp" id="wb-today-temp">--°</div>
+          <div class="wb-desc" id="wb-today-desc"></div>
+          <div class="wb-extra" id="wb-today-extra"></div>
+        </div>
+      </div>
+      <div class="weather-block" id="wb-tomorrow">
+        <div class="wb-icon" id="wb-tomorrow-icon">☁️</div>
+        <div class="wb-right">
+          <div class="wb-label">Morgen</div>
+          <div class="wb-temp" id="wb-tomorrow-temp">--°</div>
+          <div class="wb-desc" id="wb-tomorrow-desc"></div>
+          <div class="wb-extra" id="wb-tomorrow-extra"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -376,8 +422,11 @@
       <div class="label" style="margin-bottom:0;color:var(--rain)" id="radar-label">Neerslag komend uur</div>
       <div id="radar-status">laden…</div>
     </div>
-    <div id="radar-inner"></div>
-    <div id="radar-times"></div>
+    <div id="radar-chart">
+      <div id="radar-scale"></div>
+      <div id="radar-inner"></div>
+    </div>
+    <div id="radar-times" style="margin-left:38px"></div>
   </div>
 
   <!-- AGENDA -->
@@ -528,47 +577,101 @@ async function loadWeather() {
     if (!gd.results?.length) return;
     const { latitude: lat, longitude: lon, name: cityName } = gd.results[0];
     const lbl = document.getElementById('radar-label');
-    if (lbl) lbl.textContent = `Neerslag komend uur · ${cityName}`;
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&timezone=Europe%2FAmsterdam&forecast_days=1`);
+    if (lbl) lbl.textContent = `Neerslag komende 6 uur · ${cityName}`;
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FAmsterdam&forecast_days=2`);
     const d = await r.json();
+
+    // ── Blok 1: Nu ──
     const c = d.current, code = c.weathercode;
-    document.getElementById('weather-icon').textContent = weatherIcons[code] || '🌡️';
-    document.getElementById('weather-temp').textContent = Math.round(c.temperature_2m)+'°';
-    document.getElementById('weather-desc').textContent = weatherDesc[code] || 'Onbekend';
-    document.getElementById('weather-extra').textContent = `💨 ${Math.round(c.windspeed_10m)} km/u · 💧 ${c.relativehumidity_2m}%`;
+    document.getElementById('wb-now-icon').textContent = weatherIcons[code] || '🌡️';
+    document.getElementById('wb-now-temp').textContent = Math.round(c.temperature_2m)+'°';
+    document.getElementById('wb-now-desc').textContent = weatherDesc[code] || 'Onbekend';
+    document.getElementById('wb-now-extra').textContent = `💨 ${Math.round(c.windspeed_10m)} km/u · 💧 ${c.relativehumidity_2m}%`;
+
+    // ── Blok 2: Vandaag ──
+    const daily = d.daily;
+    if (daily && daily.temperature_2m_max) {
+      const tCode = daily.weathercode[0];
+      document.getElementById('wb-today-icon').textContent = weatherIcons[tCode] || '🌡️';
+      document.getElementById('wb-today-temp').textContent = Math.round(daily.temperature_2m_max[0])+'°';
+      document.getElementById('wb-today-desc').textContent = `min ${Math.round(daily.temperature_2m_min[0])}°`;
+      const rain0 = daily.precipitation_sum[0];
+      document.getElementById('wb-today-extra').textContent = rain0 > 0 ? `🌧 ${rain0.toFixed(1)} mm` : '☀️ droog';
+    }
+
+    // ── Blok 3: Morgen ──
+    if (daily && daily.temperature_2m_max.length > 1) {
+      const mCode = daily.weathercode[1];
+      document.getElementById('wb-tomorrow-icon').textContent = weatherIcons[mCode] || '🌡️';
+      document.getElementById('wb-tomorrow-temp').textContent = Math.round(daily.temperature_2m_max[1])+'°';
+      document.getElementById('wb-tomorrow-desc').textContent = `min ${Math.round(daily.temperature_2m_min[1])}°`;
+      const rain1 = daily.precipitation_sum[1];
+      document.getElementById('wb-tomorrow-extra').textContent = rain1 > 0 ? `🌧 ${rain1.toFixed(1)} mm` : '☀️ droog';
+    }
+
     buildRadar(d.hourly);
   } catch(e) {
-    document.getElementById('weather-desc').textContent = 'Geen verbinding';
+    document.getElementById('wb-now-desc').textContent = 'Geen verbinding';
   }
 }
 
 function buildRadar(hourly) {
   const now = new Date(), nowHour = now.getHours();
-  const bars = document.getElementById('radar-inner'), times = document.getElementById('radar-times');
-  bars.innerHTML = ''; times.innerHTML = '';
-  const hours    = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
+  const bars = document.getElementById('radar-inner');
+  const times = document.getElementById('radar-times');
+  const scale = document.getElementById('radar-scale');
+  bars.innerHTML = ''; times.innerHTML = ''; scale.innerHTML = '';
+
+  const hours = hourly.time.map((t,i) => ({ h: new Date(t).getHours(), p: hourly.precipitation[i] }));
   const relevant = hours.filter(h => h.h >= nowHour && h.h < nowHour+6);
   if (!relevant.length) return;
+
+  // Schaal berekenen: gebruik mooie stappen
   const maxP = Math.max(...relevant.map(h => h.p), 0.5);
+  const steps = [0.5, 1, 2, 3, 5, 8, 10, 15, 20, 30];
+  const scaleMax = steps.find(s => s >= maxP) || Math.ceil(maxP);
+  const barHeight = 52; // px, moet overeenkomen met CSS
+
   let anyRain = false;
+  let totalMm = 0;
+
   relevant.forEach((h, i) => {
-    const pct = Math.min(100, (h.p / maxP) * 100);
+    const pct = Math.min(100, (h.p / scaleMax) * 100);
     const bar = document.createElement('div');
     bar.className = 'rbar';
-    bar.style.cssText = `height:${Math.max(4,pct*0.38)}px;background:${h.p>1?'#4f8ef7':h.p>0.2?'#67b2fa':'#2d3748'};opacity:${h.p>0?0.9:0.2}`;
+    const hPx = Math.max(2, (pct / 100) * barHeight);
+    const color = h.p > 2 ? '#3b82f6' : h.p > 0.5 ? '#4f8ef7' : h.p > 0.1 ? '#67b2fa' : '#2d3748';
+    bar.style.cssText = `height:${hPx}px;background:${color};opacity:${h.p>0?0.9:0.25}`;
+    bar.innerHTML = `<span class="rbar-tip">${h.p.toFixed(1)} mm</span>`;
     bars.appendChild(bar);
     if (h.p > 0.1) anyRain = true;
-    if (i===0 || i===relevant.length-1 || i===Math.floor(relevant.length/2)) {
-      const span = document.createElement('span');
-      span.textContent = pad(h.h)+':00'; span.style.flex='1';
-      if (i===relevant.length-1) span.style.textAlign='right';
-      if (i>0&&i<relevant.length-1) span.style.textAlign='center';
-      times.appendChild(span);
-    }
+    totalMm += h.p;
   });
+
+  // Y-as schaal (boven, midden, onder)
+  scale.innerHTML = `<span>${scaleMax} mm</span><span>${(scaleMax/2).toFixed(scaleMax>=2?0:1)}</span><span>0</span>`;
+
+  // Tijdlabels
+  relevant.forEach((h, i) => {
+    const span = document.createElement('span');
+    span.textContent = pad(h.h) + ':00';
+    span.style.flex = '1';
+    span.style.textAlign = i === 0 ? 'left' : i === relevant.length - 1 ? 'right' : 'center';
+    // Toon alleen eerste, midden, laatste
+    if (i !== 0 && i !== relevant.length - 1 && i !== Math.floor(relevant.length / 2)) {
+      span.style.visibility = 'hidden';
+    }
+    times.appendChild(span);
+  });
+
   const st = document.getElementById('radar-status');
-  st.textContent = anyRain ? '🌧 regen verwacht' : '✓ droog';
-  st.style.color = anyRain ? 'var(--rain)' : 'var(--accent2)';
+  if (anyRain) {
+    st.textContent = `🌧 ${totalMm.toFixed(1)} mm verwacht`;
+    st.style.color = 'var(--rain)';
+  } else {
+    st.textContent = '✓ droog';
+    st.style.color = 'var(--accent2)';
+  }
 }
 
 // ─── LICHTEN (Philips Hue) ───────────────────────────────────────────
@@ -837,12 +940,78 @@ function formatDayLabel(date) {
   return DAYS_SHORT[date.getDay()]+' '+date.getDate()+' '+MONTHS_SHORT[date.getMonth()];
 }
 
+function renderAgenda(upcoming) {
+  const list = document.getElementById('agenda-list');
+  const now = new Date();
+  const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  list.innerHTML = '';
+  if (!upcoming.length) { list.innerHTML='<div class="no-msg">Geen afspraken komende 2 weken</div>'; return; }
+
+  const byDay = new Map();
+  upcoming.forEach(ev => {
+    const showDate = (ev.end && ev.start < todayMid && ev.end >= todayMid) ? new Date(todayMid) : ev.start;
+    const k = dayKey(showDate);
+    if (!byDay.has(k)) byDay.set(k, { date: showDate, events: [] });
+    byDay.get(k).events.push(ev);
+  });
+
+  let ci = 0;
+  byDay.forEach(({ date, events }) => {
+    const isToday = dayKey(date)===dayKey(now);
+    const hdr = document.createElement('div');
+    hdr.className = 'day-header'+(isToday?' today':'');
+    hdr.textContent = formatDayLabel(date);
+    list.appendChild(hdr);
+    events.forEach(ev => {
+      const isPast  = !ev.allDay && ev.start < now;
+      const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
+      const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
+      const div = document.createElement('div');
+      div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'');
+      div.innerHTML=`
+        <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
+        <div class="a-time">${timeStr}</div>
+        <div><div class="a-title">${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
+      list.appendChild(div);
+    });
+  });
+}
+
+const AGENDA_CACHE_KEY = 'dashboard_agenda_cache';
+
+function cacheAgenda(upcoming) {
+  // Sla op als JSON (dates als ISO strings)
+  const data = upcoming.map(ev => ({
+    summary: ev.summary, subtitle: ev.subtitle || null,
+    start: ev.start.toISOString(), end: ev.end ? ev.end.toISOString() : null,
+    allDay: ev.allDay
+  }));
+  localStorage.setItem(AGENDA_CACHE_KEY, JSON.stringify(data));
+}
+
+function loadAgendaCache() {
+  try {
+    const raw = localStorage.getItem(AGENDA_CACHE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw).map(ev => ({
+      ...ev, start: new Date(ev.start), end: ev.end ? new Date(ev.end) : null
+    }));
+  } catch(e) { return null; }
+}
+
 async function loadAgenda() {
   const list = document.getElementById('agenda-list');
   if (!cfg.ical) {
     list.innerHTML='<div class="no-msg">Geen agenda — voeg iCal URL toe via ⚙️</div>'; return;
   }
-  list.innerHTML='<div class="no-msg">Laden…</div>';
+
+  // Toon cache meteen als die er is
+  const cached = loadAgendaCache();
+  if (cached) {
+    renderAgenda(cached);
+  } else {
+    list.innerHTML='<div class="no-msg">Agenda laden…</div>';
+  }
   try {
     // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
     const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
@@ -895,40 +1064,13 @@ async function loadAgenda() {
       return visibleUntil >= todayMid && d <= cutoff;
     });
 
-    list.innerHTML = '';
-    if (!upcoming.length) { list.innerHTML='<div class="no-msg">Geen afspraken komende 2 weken</div>'; return; }
-
-    const byDay = new Map();
-    upcoming.forEach(ev => {
-      // Nachtdienst-blok dat al begonnen is: toon onder vandaag
-      const showDate = (ev.end && ev.start < todayMid && ev.end >= todayMid) ? new Date(todayMid) : ev.start;
-      const k = dayKey(showDate);
-      if (!byDay.has(k)) byDay.set(k, { date: showDate, events: [] });
-      byDay.get(k).events.push(ev);
-    });
-
-    let ci = 0;
-    byDay.forEach(({ date, events }) => {
-      const isToday = dayKey(date)===dayKey(now);
-      const hdr = document.createElement('div');
-      hdr.className = 'day-header'+(isToday?' today':'');
-      hdr.textContent = formatDayLabel(date);
-      list.appendChild(hdr);
-      events.forEach(ev => {
-        const isPast  = !ev.allDay && ev.start < now;
-        const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
-        const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
-        const div = document.createElement('div');
-        div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'');
-        div.innerHTML=`
-          <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
-          <div class="a-time">${timeStr}</div>
-          <div><div class="a-title">${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
-        list.appendChild(div);
-      });
-    });
+    cacheAgenda(upcoming);
+    renderAgenda(upcoming);
   } catch(e) {
-    list.innerHTML='<div class="no-msg" style="font-size:12px">Agenda niet bereikbaar — controleer iCal URL in ⚙️</div>';
+    // Bij fout: alleen foutmelding tonen als er geen cache was
+    if (!cached) {
+      list.innerHTML='<div class="no-msg" style="font-size:12px">Agenda niet bereikbaar — controleer iCal URL in ⚙️</div>';
+    }
   }
 }
 
