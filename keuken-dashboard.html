@@ -940,6 +940,8 @@ const MONTHS_SHORT = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt
 
 function parseIcal(text) {
   const events = [];
+  const now = new Date();
+  const thisYear = now.getFullYear();
   text.split('BEGIN:VEVENT').slice(1).forEach(block => {
     const get = k => { const m = block.match(new RegExp(k+'[^:]*:([^\r\n]+)')); return m?m[1].trim():''; };
     const summary = get('SUMMARY'), dtstart = get('DTSTART');
@@ -960,7 +962,17 @@ function parseIcal(text) {
 
     const parsed = parseDate(dtstart);
     if (!parsed) return;
-    events.push({ summary, start: parsed.date, allDay: parsed.allDay });
+
+    const rrule = get('RRULE');
+    if (rrule && /FREQ=YEARLY/i.test(rrule)) {
+      // Genereer jaarlijkse occurrences voor dit en volgend jaar
+      [thisYear, thisYear + 1].forEach(y => {
+        const occ = new Date(y, parsed.date.getMonth(), parsed.date.getDate());
+        events.push({ summary, start: occ, allDay: parsed.allDay });
+      });
+    } else {
+      events.push({ summary, start: parsed.date, allDay: parsed.allDay });
+    }
   });
   return events.sort((a,b) => a.start-b.start);
 }
@@ -1217,7 +1229,7 @@ async function loadAgenda() {
     grouped.sort((a, b) => a.start - b.start);
 
     const todayMid = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+28);
+    const cutoff   = new Date(todayMid); cutoff.setDate(cutoff.getDate()+90);
 
     const upcoming = grouped.filter(ev => {
       const d = new Date(ev.start.getFullYear(), ev.start.getMonth(), ev.start.getDate());
