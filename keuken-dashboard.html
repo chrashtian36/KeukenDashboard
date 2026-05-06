@@ -183,6 +183,44 @@
   }
   .no-msg { font-size: 14px; color: var(--muted); font-style: italic; padding: 8px 0; }
 
+  .agenda-item.birthday-today { cursor: pointer; }
+  .agenda-item.birthday-today:hover { background: rgba(251,191,36,0.08); border-radius: 8px; }
+
+  .bday-overlay {
+    position: absolute; inset: 0; z-index: 10;
+    background: radial-gradient(ellipse at center, rgba(20,24,32,0.97) 0%, rgba(12,15,24,0.99) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border-radius: var(--radius);
+    cursor: pointer;
+    overflow: hidden;
+  }
+  .bday-overlay .bday-cake { font-size: 64px; animation: bdayBounce 0.6s ease-out; }
+  .bday-overlay .bday-name {
+    font-size: 20px; font-weight: 500; color: #fff;
+    margin-top: 12px; text-align: center;
+    animation: bdayFadeIn 0.8s ease-out 0.3s both;
+  }
+  .bday-overlay .bday-hint {
+    font-size: 12px; color: var(--muted); margin-top: 16px;
+    animation: bdayFadeIn 0.8s ease-out 0.8s both;
+  }
+  @keyframes bdayBounce {
+    0%   { transform: scale(0) rotate(-20deg); opacity: 0; }
+    50%  { transform: scale(1.3) rotate(5deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+  @keyframes bdayFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  .confetti-piece {
+    position: absolute; width: 8px; height: 8px; border-radius: 2px;
+    top: -10px; animation: confettiFall linear forwards;
+  }
+  @keyframes confettiFall {
+    0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+    80%  { opacity: 1; }
+    100% { transform: translateY(var(--fall-h)) rotate(var(--spin)); opacity: 0; }
+  }
+
   /* ── LICHTEN (rechter paneel) ── */
   #lights-card {
     grid-column: 2;
@@ -963,15 +1001,17 @@ function parseIcal(text) {
     const parsed = parseDate(dtstart);
     if (!parsed) return;
 
+    const bdayKeyword = /verjaardag|jarig|birthday|bday/i.test(summary);
+    const looksLikeName = /^[\p{L} \-'\.]+$/u.test(summary) && summary.trim().includes(' ');
     const rrule = get('RRULE');
     if (rrule && /FREQ=YEARLY/i.test(rrule)) {
-      // Genereer jaarlijkse occurrences voor dit en volgend jaar
+      const isBirthday = bdayKeyword || looksLikeName;
       [thisYear, thisYear + 1].forEach(y => {
         const occ = new Date(y, parsed.date.getMonth(), parsed.date.getDate());
-        events.push({ summary, start: occ, allDay: parsed.allDay });
+        events.push({ summary, start: occ, allDay: parsed.allDay, isBirthday });
       });
     } else {
-      events.push({ summary, start: parsed.date, allDay: parsed.allDay });
+      events.push({ summary, start: parsed.date, allDay: parsed.allDay, isBirthday: bdayKeyword });
     }
   });
   return events.sort((a,b) => a.start-b.start);
@@ -1054,16 +1094,43 @@ function renderAgenda(upcoming) {
     events.forEach(ev => {
       const isPast  = !ev.allDay && ev.start < now;
       const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
+      const isBdayToday = ev.isBirthday && isToday;
       const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
       const div = document.createElement('div');
-      div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'');
+      div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'')+(isBdayToday?' birthday-today':'');
       div.innerHTML=`
-        <div class="a-dot" style="background:${COLORS[ci++%COLORS.length]}"></div>
+        <div class="a-dot" style="background:${isBdayToday ? 'var(--warm)' : COLORS[ci%COLORS.length]}"></div>
         <div class="a-time">${timeStr}</div>
-        <div><div class="a-title">${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
+        <div><div class="a-title">${isBdayToday ? '🎂 ' : ''}${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
+      ci++;
+      if (isBdayToday) div.addEventListener('click', () => showBirthdayAnimation(ev.summary));
       list.appendChild(div);
     });
   });
+}
+
+function showBirthdayAnimation(name) {
+  const card = document.getElementById('agenda-card');
+  if (card.querySelector('.bday-overlay')) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'bday-overlay';
+  const colors = ['#fbbf24','#f472b6','#60a5fa','#34d399','#a78bfa','#fb923c','#f87171'];
+  let confettiHtml = '';
+  for (let i = 0; i < 40; i++) {
+    const c = colors[Math.floor(Math.random()*colors.length)];
+    const left = Math.random()*100;
+    const delay = Math.random()*1.2;
+    const dur = 1.5 + Math.random()*1.5;
+    const spin = (Math.random()*720-360)+'deg';
+    confettiHtml += `<div class="confetti-piece" style="left:${left}%;background:${c};animation-delay:${delay}s;animation-duration:${dur}s;--fall-h:${card.offsetHeight}px;--spin:${spin}"></div>`;
+  }
+  overlay.innerHTML = confettiHtml +
+    `<div class="bday-cake">🎂</div>` +
+    `<div class="bday-name">${name}</div>` +
+    `<div class="bday-hint">tik om te sluiten</div>`;
+  overlay.addEventListener('click', () => overlay.remove());
+  card.style.position = 'relative';
+  card.appendChild(overlay);
 }
 
 const AGENDA_CACHE_KEY = 'dashboard_agenda_cache';
