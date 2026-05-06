@@ -1095,21 +1095,25 @@ function renderAgenda(upcoming) {
       const isPast  = !ev.allDay && ev.start < now;
       const isNow   = !ev.allDay && Math.abs(ev.start-now)<30*60*1000;
       const isBdayToday = ev.isBirthday && isToday;
+      const isCelebToday = ev.celebration && isToday;
+      const isSpecial = isBdayToday || isCelebToday;
       const timeStr = ev.allDay ? 'hele dag' : pad(ev.start.getHours())+':'+pad(ev.start.getMinutes());
+      const prefix = isBdayToday ? '🎂 ' : isCelebToday ? ev.celebration.emoji + ' ' : '';
       const div = document.createElement('div');
-      div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'')+(isBdayToday?' birthday-today':'');
+      div.className = 'agenda-item'+(isNow?' a-now':'')+(isPast?' past':'')+(isSpecial?' birthday-today':'');
       div.innerHTML=`
-        <div class="a-dot" style="background:${isBdayToday ? 'var(--warm)' : COLORS[ci%COLORS.length]}"></div>
+        <div class="a-dot" style="background:${isSpecial ? 'var(--warm)' : COLORS[ci%COLORS.length]}"></div>
         <div class="a-time">${timeStr}</div>
-        <div><div class="a-title">${isBdayToday ? '🎂 ' : ''}${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
+        <div><div class="a-title">${prefix}${ev.summary}</div>${ev.subtitle?'<div class="a-subtitle">'+ev.subtitle+'</div>':''}</div>`;
       ci++;
-      if (isBdayToday) div.addEventListener('click', () => showBirthdayAnimation(ev.summary));
+      if (isBdayToday) div.addEventListener('click', () => showCelebrationAnimation('🎂', ev.summary));
+      if (isCelebToday) div.addEventListener('click', () => showCelebrationAnimation(ev.celebration.emoji, ev.celebration.label));
       list.appendChild(div);
     });
   });
 }
 
-function showBirthdayAnimation(name) {
+function showCelebrationAnimation(emoji, label) {
   const card = document.getElementById('agenda-card');
   if (card.querySelector('.bday-overlay')) return;
   const overlay = document.createElement('div');
@@ -1125,8 +1129,8 @@ function showBirthdayAnimation(name) {
     confettiHtml += `<div class="confetti-piece" style="left:${left}%;background:${c};animation-delay:${delay}s;animation-duration:${dur}s;--fall-h:${card.offsetHeight}px;--spin:${spin}"></div>`;
   }
   overlay.innerHTML = confettiHtml +
-    `<div class="bday-cake">🎂</div>` +
-    `<div class="bday-name">${name}</div>` +
+    `<div class="bday-cake">${emoji}</div>` +
+    `<div class="bday-name">${label}</div>` +
     `<div class="bday-hint">tik om te sluiten</div>`;
   overlay.addEventListener('click', () => overlay.remove());
   card.style.position = 'relative';
@@ -1282,12 +1286,16 @@ async function loadAgenda() {
     // Voeg Nederlandse feestdagen toe
     const now      = new Date();
     const thisYear = now.getFullYear();
+    const celebrations = {
+      'Moederdag':  { emoji: '💐', label: 'Fijne Moederdag!' },
+      'Vaderdag':   { emoji: '👔', label: 'Fijne Vaderdag!' },
+    };
     [thisYear, thisYear + 1].forEach(y => {
       getDutchHolidays(y).forEach(h => {
-        allEvents.push({ summary: '🇳🇱 ' + h.name, start: h.date, allDay: true, isHoliday: true });
+        allEvents.push({ summary: '🇳🇱 ' + h.name, start: h.date, allDay: true, isHoliday: true, celebration: celebrations[h.name] });
       });
       getMadagascarHolidays(y).forEach(h => {
-        allEvents.push({ summary: '🇲🇬 ' + h.name, start: h.date, allDay: true, isHoliday: true });
+        allEvents.push({ summary: '🇲🇬 ' + h.name, start: h.date, allDay: true, isHoliday: true, celebration: celebrations[h.name] });
       });
     });
 
