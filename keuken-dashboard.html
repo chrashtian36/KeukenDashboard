@@ -846,52 +846,108 @@ setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
 
 // ─── DAGELIJKSE QUOTE ───────────────────────────────────────────────
 const QUOTE_FALLBACKS = [
-  { text: 'Het leven is wat je overkomt terwijl je druk bent met andere plannen maken.', author: 'John Lennon' },
-  { text: 'De enige manier om geweldig werk te doen, is houden van wat je doet.', author: 'Steve Jobs' },
-  { text: 'Wees de verandering die je in de wereld wilt zien.', author: 'Gandhi' },
-  { text: 'Elk moment is een nieuw begin.', author: 'T.S. Eliot' },
-  { text: 'Niet alles wat telt kan geteld worden, en niet alles wat geteld wordt, telt.', author: 'Einstein' },
+  // ── NL underground / alternatief ──
+  { text: 'We gaan door tot het licht wordt.', author: 'Fratsen' },
+  { text: 'Alles is niks, en niks is alles.', author: 'Fratsen' },
+  { text: 'Het maakt niet uit, we hebben tijd.', author: 'Hang Youth' },
+  { text: 'De zon komt op voor iedereen.', author: 'Hang Youth' },
+  { text: 'We werken ons kapot voor een beetje geluk.', author: 'Ploegendienst' },
+  { text: 'Morgen wordt alles anders, morgen ben ik beter.', author: 'Spinvis' },
+  { text: 'Nú leven, niet morgen.', author: 'Goldband' },
+  { text: 'Stil in mij.', author: 'Van Dik Hout' },
+  // ── Chansons françaises ──
+  { text: 'Non, je ne regrette rien.', author: 'Édith Piaf' },
+  { text: 'La vie en rose.', author: 'Édith Piaf' },
+  { text: 'Il me dit des mots d\'amour, des mots de tous les jours.', author: 'Édith Piaf' },
+  { text: 'Sous le ciel de Paris, s\'envole une chanson.', author: 'Yves Montand' },
+  { text: 'Ne me quitte pas.', author: 'Jacques Brel' },
+  { text: 'Quand on n\'a que l\'amour.', author: 'Jacques Brel' },
+  { text: 'Avec le temps, va, tout s\'en va.', author: 'Léo Ferré' },
+  { text: 'La bohème, la bohème, ça voulait dire on est heureux.', author: 'Charles Aznavour' },
+  { text: 'Je suis venu te dire que je m\'en vais.', author: 'Serge Gainsbourg' },
+  { text: 'Le vent nous portera.', author: 'Noir Désir' },
+  { text: 'Comme des enfants.', author: 'Coeur de Pirate' },
+  { text: 'J\'ai demandé à la lune.', author: 'Indochine' },
+  { text: 'La solitude, ça n\'existe pas.', author: 'Gilbert Bécaud' },
+  // ── Latino rock / rock en español ──
+  { text: 'Se viene el estallido.', author: 'Bersuit Vergarabat' },
+  { text: 'La vida es hermosa, ya verás.', author: 'Bersuit Vergarabat' },
+  { text: 'Un pacto para vivir, un pacto para morir.', author: 'Bersuit Vergarabat' },
+  { text: 'De música ligera.', author: 'Soda Stereo' },
+  { text: 'Persiana americana, sube y baja.', author: 'Soda Stereo' },
+  { text: 'Lamento boliviano, que nace del corazón.', author: 'Enanitos Verdes' },
+  { text: 'Mariposa traicionera, todo se derrumbó.', author: 'Maná' },
+  { text: 'Ojalá que llueva café en el campo.', author: 'Juan Luis Guerra' },
+  { text: 'El día que me quieras.', author: 'Carlos Gardel' },
+  { text: 'Gracias a la vida, que me ha dado tanto.', author: 'Violeta Parra' },
+  { text: 'Latinoamérica, soy lo que dejaron.', author: 'Calle 13' },
+  { text: 'Todo cambia.', author: 'Mercedes Sosa' },
+  // ── Indie / alternative / rock / emo EN ──
+  { text: 'This is the way you left me — I\'m not pretending.', author: 'Radiohead' },
+  { text: 'How strange it is to be anything at all.', author: 'Neutral Milk Hotel' },
+  { text: 'I am just a poor boy, though my story\'s seldom told.', author: 'Simon & Garfunkel' },
+  { text: 'There is a light that never goes out.', author: 'The Smiths' },
+  { text: 'I know someday you\'ll have a beautiful life.', author: 'Pearl Jam' },
+  { text: 'We\'re just two lost souls swimming in a fish bowl.', author: 'Pink Floyd' },
+  { text: 'I will follow you into the dark.', author: 'Death Cab for Cutie' },
+  { text: 'The less I know the better.', author: 'Tame Impala' },
+  { text: 'Love is watching someone die.', author: 'Death Cab for Cutie' },
+  { text: 'I\'m a creep, I\'m a weirdo — what the hell am I doing here?', author: 'Radiohead' },
+  { text: 'People help the people.', author: 'Birdy' },
+  { text: 'We\'ll always have the best of times.', author: 'The Black Keys' },
+  { text: 'And in the end, the love you take is equal to the love you make.', author: 'The Beatles' },
+  { text: 'Where is my mind?', author: 'Pixies' },
+  { text: 'I\'m not okay, I promise.', author: 'My Chemical Romance' },
+  { text: 'Welcome to the black parade.', author: 'My Chemical Romance' },
+  { text: 'The youth is starting to change.', author: 'Arcade Fire' },
+  { text: 'Wake up and smell the roses.', author: 'Arcade Fire' },
+  { text: 'We used to wait for it.', author: 'Arcade Fire' },
+  { text: 'Everything is broken, everyone is lying.', author: 'Modest Mouse' },
+  { text: 'Float on, alright, already we\'ll all float on.', author: 'Modest Mouse' },
+  { text: 'I can\'t feel a thing, all mellow now.', author: 'Placebo' },
+  { text: 'Cut the cord.', author: 'Shinedown' },
+  { text: 'In the aeroplane over the sea.', author: 'Neutral Milk Hotel' },
+  { text: 'Do I wanna know if this feeling flows both ways?', author: 'Arctic Monkeys' },
+  { text: 'It\'s a new dawn, it\'s a new day, and I\'m feeling good.', author: 'Muse' },
+  { text: 'Nobody said it was easy.', author: 'Coldplay' },
+  { text: 'We\'re still building, finding out what it all means.', author: 'Bon Iver' },
+  { text: 'Skinny love, just last the year.', author: 'Bon Iver' },
+  { text: 'I took my love and I took it down.', author: 'Fleetwood Mac' },
+  { text: 'Just because you feel it doesn\'t mean it\'s there.', author: 'Radiohead' },
+  { text: 'We are the angry and the desperate.', author: 'Rise Against' },
+  { text: 'Times like these you learn to live again.', author: 'Foo Fighters' },
+  { text: 'Heroes, just for one day.', author: 'David Bowie' },
+  { text: 'I see a red door and I want it painted black.', author: 'The Rolling Stones' },
+  { text: 'This is a call to arms, gather soldiers.', author: 'Foo Fighters' },
+  { text: 'I\'m on the pursuit of happiness.', author: 'Kid Cudi' },
+  { text: 'Sun is shining in the sky, there ain\'t a cloud in sight.', author: 'ELO' },
+  { text: 'The future\'s not set, there\'s no fate but what we make.', author: 'Smashing Pumpkins' },
+  // ── Wijsheden ──
   { text: 'De beste tijd om een boom te planten was 20 jaar geleden. De op één na beste tijd is nu.', author: 'Chinees spreekwoord' },
-  { text: 'Geluk is geen bestemming, maar een manier van reizen.', author: 'Margaret Lee Runbeck' },
   { text: 'In het midden van moeilijkheden liggen kansen.', author: 'Einstein' },
-  { text: 'Je hoeft niet geweldig te zijn om te beginnen, maar je moet beginnen om geweldig te worden.', author: 'Zig Ziglar' },
-  { text: 'Wat achter ons ligt en wat voor ons ligt is niets vergeleken met wat in ons ligt.', author: 'Ralph Waldo Emerson' },
-  { text: 'Het geheim van vooruitgang is beginnen.', author: 'Mark Twain' },
-  { text: 'Doe vandaag iets waar je toekomstige zelf je dankbaar voor zal zijn.', author: 'Sean Patrick Flanery' },
   { text: 'De weg van duizend mijl begint met één stap.', author: 'Lao Tzu' },
-  { text: 'Niet de sterkste overleeft, maar degene die zich het best aanpast.', author: 'Charles Darwin' },
-  { text: 'Alles wat je kunt voorstellen is echt.', author: 'Pablo Picasso' },
-  { text: 'Het leven krimpt of dijt uit in verhouding tot je moed.', author: 'Anaïs Nin' },
-  { text: 'Vriendelijkheid is een taal die doven kunnen horen en blinden kunnen zien.', author: 'Mark Twain' },
-  { text: 'Wie zijn best doet, hoeft niet bang te zijn voor het resultaat.', author: 'Nederlands spreekwoord' },
-  { text: 'De wereld heeft genoeg voor ieders behoefte, maar niet voor ieders hebzucht.', author: 'Gandhi' },
-  { text: 'Geduld is niet het vermogen om te wachten, maar het vermogen om een goed humeur te bewaren tijdens het wachten.', author: 'Joyce Meyer' },
-  { text: 'Kennis is weten dat een tomaat een vrucht is. Wijsheid is het niet in een fruitsalade doen.', author: 'Miles Kington' },
-  { text: 'Het is niet de berg die we bedwingen — we bedwingen onszelf.', author: 'Edmund Hillary' },
   { text: 'Een schip in de haven is veilig, maar daar zijn schepen niet voor gebouwd.', author: 'John A. Shedd' },
-  { text: 'Het leven is kort. Lach wanneer je kunt, verontschuldig je als je moet, en laat los wat je niet kunt veranderen.', author: 'Onbekend' },
-  { text: 'Succes is niet definitief, falen is niet fataal — het is de moed om door te gaan die telt.', author: 'Winston Churchill' },
-  { text: 'Wees niet bang om langzaam te gaan, wees alleen bang om stil te staan.', author: 'Chinees spreekwoord' },
-  { text: 'De mooiste dingen in het leven zijn geen dingen.', author: 'Onbekend' },
   { text: 'Hoe je iets doet, is hoe je alles doet.', author: 'Zen wijsheid' },
   { text: 'Dankbaarheid verandert wat we hebben in genoeg.', author: 'Aesop' },
-  { text: 'Laat je niet ontmoedigen. Het is vaak de laatste sleutel aan de bos die het slot opent.', author: 'Paulo Coelho' },
-  { text: 'Het leven wordt niet gemeten aan het aantal ademhalingen, maar aan de momenten die je adem benemen.', author: 'Maya Angelou' },
+  { text: 'Succes is niet definitief, falen is niet fataal — het is de moed om door te gaan die telt.', author: 'Winston Churchill' },
+  { text: 'Wees niet bang om langzaam te gaan, wees alleen bang om stil te staan.', author: 'Chinees spreekwoord' },
+  { text: 'Doe vandaag iets waar je toekomstige zelf je dankbaar voor zal zijn.', author: 'Sean Patrick Flanery' },
+  { text: 'Het geheim van vooruitgang is beginnen.', author: 'Mark Twain' },
 ];
 
 let dailyQuote = null;
 
 async function loadDailyQuote() {
-  // Probeer zenquotes API
+  // Probeer QuoteSlate API (CORS-friendly)
   try {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), 5000);
-    const r = await fetch('https://zenquotes.io/api/today', { signal: ctrl.signal });
+    const r = await fetch('https://quoteslate.vercel.app/api/quotes/random', { signal: ctrl.signal });
     clearTimeout(timer);
     if (r.ok) {
       const data = await r.json();
-      if (data && data[0] && data[0].q) {
-        dailyQuote = { text: data[0].q, author: data[0].a };
+      if (data && data.quote) {
+        dailyQuote = { text: data.quote, author: data.author };
         return;
       }
     }
