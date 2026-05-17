@@ -938,20 +938,25 @@ const QUOTE_FALLBACKS = [
 let dailyQuote = null;
 
 async function loadDailyQuote() {
-  // Probeer QuoteSlate API (CORS-friendly)
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), 5000);
-    const r = await fetch('https://quoteslate.vercel.app/api/quotes/random', { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (r.ok) {
-      const data = await r.json();
-      if (data && data.quote) {
-        dailyQuote = { text: data.quote, author: data.author };
-        return;
+  const apis = [
+    { url: 'https://quoteslate.vercel.app/api/quotes/random',
+      parse: d => d && d.quote ? { text: d.quote, author: d.author } : null },
+    { url: 'https://dummyjson.com/quotes/random',
+      parse: d => d && d.quote ? { text: d.quote, author: d.author } : null },
+  ];
+  for (const api of apis) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4000);
+      const r = await fetch(api.url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (r.ok) {
+        const data = await r.json();
+        const q = api.parse(data);
+        if (q) { dailyQuote = q; return; }
       }
-    }
-  } catch(e) {}
+    } catch(e) {}
+  }
 
   // Fallback: kies quote op basis van dag van het jaar
   const now = new Date();
