@@ -15,9 +15,23 @@ jobs:
 
       - name: Rooster ophalen
         run: |
-          curl -sf -m 30 \
+          HTTP_CODE=$(curl -sf -m 30 -L --retry 2 --retry-delay 3 \
+            -A "Mozilla/5.0 (KeukenDashboard fetch job; +https://github.com/chrashtian36/KeukenDashboard)" \
+            -w '%{http_code}' \
             'https://gemivasvg.aysist7.nl/ical/e5272043-fd47-4464-90f3-37348280d608/calendar.ics' \
-            -o rooster.ics
+            -o rooster.ics.new)
+
+          BYTES=$(wc -c < rooster.ics.new | tr -d ' ')
+          DTSTAMP=$(grep -m1 '^DTSTAMP:' rooster.ics.new || echo "geen DTSTAMP gevonden")
+          echo "::notice title=Rooster fetch::HTTP=$HTTP_CODE bytes=$BYTES $DTSTAMP"
+
+          if ! grep -q '^BEGIN:VCALENDAR' rooster.ics.new; then
+            echo "::error title=Rooster fetch::Opgehaalde feed bevat geen geldige ics-inhoud (HTTP=$HTTP_CODE, bytes=$BYTES)"
+            head -c 500 rooster.ics.new
+            exit 1
+          fi
+
+          mv rooster.ics.new rooster.ics
 
       - name: Commit als er wijzigingen zijn
         run: |
