@@ -1359,19 +1359,25 @@ async function loadAgenda() {
     // Haal rooster + persoonlijke agenda op van lokale bestanden (via GitHub Action opgehaald,
     // zodat CORS-proxies niet nodig zijn — die zijn te onbetrouwbaar gebleken)
     const allEvents = [];
+    let persoonlijkOk = false;
     try {
       const rr = await fetch('rooster.ics?_t=' + Date.now(), { cache: 'no-store' });
       if (rr.ok) { const rt = await rr.text(); allEvents.push(...parseIcal(rt)); }
     } catch(e) {}
     try {
       const pr = await fetch('persoonlijk.ics?_t=' + Date.now(), { cache: 'no-store' });
-      if (pr.ok) { const pt = await pr.text(); allEvents.push(...parseIcal(pt)); }
+      if (pr.ok) {
+        const pt = await pr.text();
+        if (pt.includes('BEGIN:VCALENDAR')) { allEvents.push(...parseIcal(pt)); persoonlijkOk = true; }
+      }
     } catch(e) {}
 
     // Haal overige agenda's op via proxies
     await Promise.all(urls.map(async icalUrl => {
       if (icalUrl.includes('gemivasvg')) return; // wordt al via rooster.ics geladen
-      if (icalUrl.includes('rademakerpetera')) return; // wordt al via persoonlijk.ics geladen
+      // Alleen overslaan als persoonlijk.ics daadwerkelijk is gelukt — anders blijft de
+      // proxy-fallback intact zodat er niets kapotgaat als dat bestand (nog) niet bestaat
+      if (persoonlijkOk && icalUrl.includes('rademakerpetera')) return;
       try {
         let text = null;
         const encoded = encodeURIComponent(icalUrl);
