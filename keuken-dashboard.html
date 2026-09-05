@@ -1356,16 +1356,22 @@ async function loadAgenda() {
     // Ondersteuning voor meerdere iCal URLs, gescheiden door komma's
     const urls = cfg.ical.split(',').map(u => u.trim()).filter(Boolean);
 
-    // Haal rooster op van lokaal bestand (via GitHub Action opgehaald)
+    // Haal rooster + persoonlijke agenda op van lokale bestanden (via GitHub Action opgehaald,
+    // zodat CORS-proxies niet nodig zijn — die zijn te onbetrouwbaar gebleken)
     const allEvents = [];
     try {
       const rr = await fetch('rooster.ics?_t=' + Date.now(), { cache: 'no-store' });
       if (rr.ok) { const rt = await rr.text(); allEvents.push(...parseIcal(rt)); }
     } catch(e) {}
+    try {
+      const pr = await fetch('persoonlijk.ics?_t=' + Date.now(), { cache: 'no-store' });
+      if (pr.ok) { const pt = await pr.text(); allEvents.push(...parseIcal(pt)); }
+    } catch(e) {}
 
     // Haal overige agenda's op via proxies
     await Promise.all(urls.map(async icalUrl => {
       if (icalUrl.includes('gemivasvg')) return; // wordt al via rooster.ics geladen
+      if (icalUrl.includes('rademakerpetera')) return; // wordt al via persoonlijk.ics geladen
       try {
         let text = null;
         const encoded = encodeURIComponent(icalUrl);
