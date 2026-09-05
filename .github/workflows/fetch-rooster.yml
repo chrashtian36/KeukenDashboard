@@ -33,10 +33,31 @@ jobs:
 
           mv rooster.ics.new rooster.ics
 
+      - name: Persoonlijke agenda ophalen
+        env:
+          PERSONAL_ICAL_URL: ${{ secrets.PERSONAL_ICAL_URL }}
+        run: |
+          HTTP_CODE=$(curl -sf -m 30 -L --retry 2 --retry-delay 3 \
+            -A "Mozilla/5.0 (KeukenDashboard fetch job; +https://github.com/chrashtian36/KeukenDashboard)" \
+            -w '%{http_code}' \
+            "$PERSONAL_ICAL_URL" \
+            -o persoonlijk.ics.new)
+
+          BYTES=$(wc -c < persoonlijk.ics.new | tr -d ' ')
+          echo "::notice title=Persoonlijke agenda fetch::HTTP=$HTTP_CODE bytes=$BYTES"
+
+          if ! grep -q '^BEGIN:VCALENDAR' persoonlijk.ics.new; then
+            echo "::error title=Persoonlijke agenda fetch::Opgehaalde feed bevat geen geldige ics-inhoud (HTTP=$HTTP_CODE, bytes=$BYTES)"
+            head -c 500 persoonlijk.ics.new
+            exit 1
+          fi
+
+          mv persoonlijk.ics.new persoonlijk.ics
+
       - name: Commit als er wijzigingen zijn
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add rooster.ics
+          git add rooster.ics persoonlijk.ics
           git diff --cached --quiet || git commit -m "Rooster bijgewerkt $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
