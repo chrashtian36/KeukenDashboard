@@ -728,17 +728,27 @@ function setHueStatus(msg, ok) {
   if (el) { el.textContent = msg; el.style.color = ok ? 'var(--accent2)' : 'var(--muted)'; }
 }
 
+// fetch met timeout, zodat een haperende bridge het dashboard niet laat hangen
+function hueFetch(url, opts = {}) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 6000);
+  return fetch(url, { ...opts, signal: ctrl.signal, cache: 'no-store' }).finally(() => clearTimeout(t));
+}
+
+let hueLoading = false;
 async function loadHueLights() {
   if (!cfg.hueIp || !cfg.hueToken) { setHueStatus('Hue: stel in via ⚙️', false); buildLightsFallback(); return; }
+  if (hueLoading) return;
+  hueLoading = true;
   try {
-    const r = await fetch(`${hueBase()}/groups`);
+    const r = await hueFetch(`${hueBase()}/groups`);
     if (!r.ok) throw new Error();
     const data = await r.json();
     hueGroups = Object.entries(data)
       .filter(([,g]) => ['Room','Zone','LightGroup'].includes(g.type))
       .map(([id,g]) => ({ id, name: g.name, on: g.action.on, bri: g.action.bri!=null?Math.round(g.action.bri/2.54):100, type:'group' }));
     if (!hueGroups.length) {
-      const lr = await fetch(`${hueBase()}/lights`);
+      const lr = await hueFetch(`${hueBase()}/lights`);
       const ld = await lr.json();
       hueGroups = Object.entries(ld).map(([id,l]) => ({ id, name: l.name, on: l.state.on, bri: Math.round(l.state.bri/2.54), type:'light' }));
     }
@@ -746,9 +756,13 @@ async function loadHueLights() {
     setHueStatus(`Hue ✓ · ${hueGroups.length}`, true);
     buildLightsHue();
   } catch(e) {
+    const wasConnected = hueConnected;
     hueConnected = false;
-    setHueStatus('Hue: geen verbinding', false);
-    buildLightsFallback();
+    setHueStatus('Hue: geen verbinding · tik om opnieuw', false);
+    // Laat de laatst bekende Hue-knoppen staan bij een korte hapering; alleen fallback als er nooit verbinding was
+    if (!wasConnected && !hueGroups.length) buildLightsFallback();
+  } finally {
+    hueLoading = false;
   }
 }
 
@@ -784,7 +798,7 @@ async function toggleHueLight(id, type) {
   if (unit) unit.classList.toggle('on', newOn);
   try {
     const ep = type==='group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
-    await fetch(ep, { method:'PUT', body: JSON.stringify({ on: newOn }) });
+    await hueFetch(ep, { method:'PUT', body: JSON.stringify({ on: newOn }) });
   } catch(e) { g.on=!newOn; if(unit) unit.classList.toggle('on',!newOn); }
 }
 
@@ -797,7 +811,7 @@ async function onHueDim(id, type, slider) {
   const unit = document.getElementById('light-'+id); if (unit) unit.classList.add('on');
   try {
     const ep = type==='group' ? `${hueBase()}/groups/${id}/action` : `${hueBase()}/lights/${id}/state`;
-    await fetch(ep, { method:'PUT', body: JSON.stringify({ on:true, bri: Math.max(1,Math.round(pct*2.54)) }) });
+    await hueFetch(ep, { method:'PUT', body: JSON.stringify({ on:true, bri: Math.max(1,Math.round(pct*2.54)) }) });
   } catch(e) {}
 }
 
@@ -842,7 +856,14 @@ function openGH(e) {
   window.location.href = 'googlehome://';
   setTimeout(() => { window.open('https://home.google.com', '_blank'); }, 500);
 }
-setInterval(() => { if (hueConnected) loadHueLights(); }, 30000);
+// Altijd blijven proberen, ook na een mislukte poging (voorheen stopte dit na één fout)
+setInterval(loadHueLights, 30000);
+// Direct opnieuw verbinden als de iPad uit slaap komt of het wifi terug is
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadHueLights(); });
+window.addEventListener('online', loadHueLights);
+window.addEventListener('pageshow', e => { if (e.persisted) loadHueLights(); });
+// Tik op de Hue-status om handmatig opnieuw te verbinden
+document.getElementById('hue-status')?.addEventListener('click', loadHueLights);
 
 // ─── DAGELIJKSE QUOTE ───────────────────────────────────────────────
 const QUOTE_FALLBACKS = [
