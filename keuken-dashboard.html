@@ -742,8 +742,10 @@ async function loadHueLights() {
   hueLoading = true;
   try {
     const r = await hueFetch(`${hueBase()}/groups`);
-    if (!r.ok) throw new Error();
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
+    // De bridge geeft fouten (bv. ongeldige token) terug als [{error:{...}}] met status 200
+    if (Array.isArray(data) && data[0]?.error) throw new Error('bridge: ' + data[0].error.description);
     hueGroups = Object.entries(data)
       .filter(([,g]) => ['Room','Zone','LightGroup'].includes(g.type))
       .map(([id,g]) => ({ id, name: g.name, on: g.action.on, bri: g.action.bri!=null?Math.round(g.action.bri/2.54):100, type:'group' }));
@@ -758,7 +760,12 @@ async function loadHueLights() {
   } catch(e) {
     const wasConnected = hueConnected;
     hueConnected = false;
-    setHueStatus('Hue: geen verbinding · tik om opnieuw', false);
+    // Toon de oorzaak, zodat we kunnen zien wát er misgaat
+    let reden = e?.name === 'AbortError' ? 'time-out (bridge reageert niet)'
+              : (e?.message || e?.name || 'onbekend');
+    if (reden === 'Load failed' || reden === 'Failed to fetch') reden += ' (certificaat/netwerk)';
+    console.warn('Hue-fout:', e);
+    setHueStatus('Hue: ' + reden + ' · tik om opnieuw', false);
     // Laat de laatst bekende Hue-knoppen staan bij een korte hapering; alleen fallback als er nooit verbinding was
     if (!wasConnected && !hueGroups.length) buildLightsFallback();
   } finally {
