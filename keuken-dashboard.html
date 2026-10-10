@@ -141,6 +141,13 @@
     font-size: 17px; font-weight: 500; color: #ffe8cc; margin-bottom: 14px;
   }
   #cp-close { font-size: 20px; color: #a8998a; cursor: pointer; padding: 0 4px; }
+  .cp-actions { display: flex; align-items: center; gap: 14px; }
+  #cp-refresh {
+    font-size: 20px; color: #fdba74; cursor: pointer; padding: 0 4px;
+    display: inline-block; -webkit-tap-highlight-color: transparent;
+  }
+  #cp-refresh.busy { animation: cp-spin 0.9s linear infinite; opacity: 0.6; pointer-events: none; }
+  @keyframes cp-spin { to { transform: rotate(360deg); } }
   .cp-banner {
     background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.3);
     color: #bfdbfe; border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 10px;
@@ -597,7 +604,12 @@
 <!-- Binnenklimaat pop-up -->
 <div id="climate-panel" onclick="if (event.target === this) closeClimate()">
   <div id="climate-inner">
-    <h2>🏠 Binnenklimaat <span id="cp-close" onclick="closeClimate()">✕</span></h2>
+    <h2>🏠 Binnenklimaat
+      <span class="cp-actions">
+        <span id="cp-refresh" onclick="refreshClimate()" title="Nu ophalen bij Tado">↻</span>
+        <span id="cp-close" onclick="closeClimate()">✕</span>
+      </span>
+    </h2>
     <div id="cp-body"></div>
   </div>
 </div>
@@ -711,21 +723,41 @@ setInterval(updateClock, 1000);
 
 // ─── BINNENKLIMAAT (Tado X via Cloudflare Worker, zie tado-worker/) ──
 const TADO_ROOM = 'Woonkamer';
-let climateData = null, climateCloseTimer = null;
+let climateData = null, climateCloseTimer = null, lastSelfRefresh = 0;
+// Zelfherstel: zijn de gegevens ouder dan dit (bv. omdat de cron niet draaide), dan laat het
+// dashboard de Worker zelf verversen. Ruim boven de cron van 5 min, zodat het normaal niet nodig is.
+const TADO_STALE_MIN = 10;
 function fmtTemp(v) { return v == null ? '--' : v.toFixed(1).replace('.', ','); }
 
-async function loadClimate() {
+async function fetchTado(path) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 15000);
+  const r = await fetch(`${cfg.tadoUrl}${path}?key=${encodeURIComponent(cfg.tadoKey)}`, { signal: ctrl.signal, cache: 'no-store' })
+    .finally(() => clearTimeout(t));
+  const d = await r.json();
+  if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+  return d;
+}
+
+// force = direct bij Tado laten ophalen (/refresh, kost 1 Tado-verzoek)
+async function loadClimate(force = false) {
   const block = document.getElementById('climate-block');
   if (!cfg.tadoUrl || !cfg.tadoKey) { block.style.display = 'none'; return; }
   block.style.display = '';
   const extra = document.getElementById('cl-extra');
   try {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 10000);
-    const r = await fetch(`${cfg.tadoUrl}/?key=${encodeURIComponent(cfg.tadoKey)}`, { signal: ctrl.signal, cache: 'no-store' })
-      .finally(() => clearTimeout(t));
-    const d = await r.json();
-    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    let d;
+    if (force) {
+      // Lukt verversen niet, toon dan toch de laatst opgeslagen gegevens (de Worker noteert de fout daarin)
+      try { d = await fetchTado('/refresh'); } catch (e) { console.warn('Tado verversen mislukt:', e); d = await fetchTado('/'); }
+    } else {
+      d = await fetchTado('/');
+      const ageMin = (Date.now() - new Date(d.updated).getTime()) / 60000;
+      if (ageMin > TADO_STALE_MIN && Date.now() - lastSelfRefresh > TADO_STALE_MIN * 60000) {
+        lastSelfRefresh = Date.now();
+        try { d = await fetchTado('/refresh'); } catch (e) { console.warn('Tado zelfherstel mislukt:', e); }
+      }
+    }
     climateData = d;
     if (document.getElementById('climate-panel').classList.contains('open')) renderClimatePanel();
 
@@ -781,6 +813,13 @@ function openClimate() {
   // Keukenscherm: na een minuut vanzelf weer dicht
   clearTimeout(climateCloseTimer);
   climateCloseTimer = setTimeout(closeClimate, 60000);
+}
+async function refreshClimate() {
+  const btn = document.getElementById('cp-refresh');
+  btn.classList.add('busy');
+  clearTimeout(climateCloseTimer);
+  climateCloseTimer = setTimeout(closeClimate, 60000);
+  try { await loadClimate(true); } finally { btn.classList.remove('busy'); }
 }
 function closeClimate() {
   clearTimeout(climateCloseTimer);
