@@ -94,7 +94,14 @@
     border: 1px solid rgba(251,146,60,0.35);
     transition: box-shadow 0.6s, border-color 0.6s;
   }
-  #climate-block.heating { border-color: rgba(251,146,60,0.7); box-shadow: 0 0 18px rgba(251,146,60,0.25); }
+  /* Warmteniveaus (zie heatLevel): 1 = licht (amber), 2 = verwarmt (oranje), 3 = volop (rood) */
+  #climate-block[data-heat="1"] { --heat: #fbbf24; border-color: rgba(251,191,36,0.6);  box-shadow: 0 0 12px rgba(251,191,36,0.18); }
+  #climate-block[data-heat="2"] { --heat: #fb923c; border-color: rgba(251,146,60,0.8);  box-shadow: 0 0 18px rgba(251,146,60,0.3); }
+  #climate-block[data-heat="3"] { --heat: #f87171; border-color: rgba(239,68,68,0.9);   box-shadow: 0 0 24px rgba(239,68,68,0.4);
+    background: linear-gradient(135deg, rgba(239,68,68,0.2) 0%, rgba(251,146,60,0.06) 100%); }
+  #climate-block[data-heat="1"] #cl-icon { background: rgba(251,191,36,0.16); border-color: rgba(251,191,36,0.45); }
+  #climate-block[data-heat="2"] #cl-icon { background: rgba(251,146,60,0.22); border-color: rgba(251,146,60,0.6); }
+  #climate-block[data-heat="3"] #cl-icon { background: rgba(239,68,68,0.25);  border-color: rgba(239,68,68,0.7); }
   #cl-icon {
     width: 54px; height: 54px; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
@@ -108,9 +115,8 @@
   }
   #cl-temp { font-family: 'DM Mono', monospace; font-size: 34px; font-weight: 300; color: #ffe8cc; line-height: 1; }
   #cl-desc { font-size: 13px; color: #c9b8a6; margin-top: 3px; font-weight: 500; white-space: nowrap; }
-  #climate-block.heating #cl-desc { color: var(--warm); }
   #cl-extra { font-size: 12px; color: #a8998a; margin-top: 2px; white-space: nowrap; }
-  #climate-block.heating #cl-extra { color: #fb923c; }
+  #climate-block:not([data-heat="0"]) #cl-extra { color: var(--heat); font-weight: 500; }
   #cl-extra.warn { color: #f87171 !important; }
   #climate-block { cursor: pointer; -webkit-tap-highlight-color: transparent; }
   #climate-block:active { transform: scale(0.98); }
@@ -145,16 +151,18 @@
     border-radius: 18px;
     background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.18);
   }
-  .cp-room.heating { border-color: rgba(251,146,60,0.55); background: rgba(251,146,60,0.11); }
+  .cp-room.heat-1 { --heat: #fbbf24; border-color: rgba(251,191,36,0.45); background: rgba(251,191,36,0.08); }
+  .cp-room.heat-2 { --heat: #fb923c; border-color: rgba(251,146,60,0.65); background: rgba(251,146,60,0.12); }
+  .cp-room.heat-3 { --heat: #f87171; border-color: rgba(239,68,68,0.75);  background: rgba(239,68,68,0.13); }
   .cp-name { font-size: 15px; font-weight: 500; color: #ffe8cc; }
   .cp-badges { font-size: 12px; color: var(--warm); margin-left: 6px; }
   .cp-temp { font-family: 'DM Mono', monospace; font-size: 30px; font-weight: 300; color: #ffe8cc; line-height: 1; grid-row: span 2; text-align: right; }
   .cp-sub { font-size: 13px; color: #c9b8a6; }
   .cp-bar { grid-column: 1 / 3; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
   .cp-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
-  .cp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #fbbf24, #fb923c); }
+  .cp-fill { height: 100%; border-radius: 3px; background: var(--heat, #6b6158); }
   .cp-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: #a8998a; min-width: 82px; text-align: right; }
-  .cp-room.heating .cp-pct { color: #fb923c; }
+  .cp-room[class*="heat-"] .cp-pct { color: var(--heat); }
   .cp-foot { font-size: 12px; color: #a8998a; margin-top: 10px; line-height: 1.6; font-family: 'DM Mono', monospace; }
   .cp-foot b { color: #ffe8cc; font-weight: 400; }
   #weather-blocks {
@@ -502,7 +510,7 @@
         <div id="time">--:--</div>
         <div id="date-str">laden…</div>
       </div>
-      <div id="climate-block" style="display:none" onclick="openClimate()">
+      <div id="climate-block" data-heat="0" style="display:none" onclick="openClimate()">
         <div id="cl-icon">🌡️</div>
         <div>
           <div id="cl-label">🏠 Binnen</div>
@@ -724,11 +732,12 @@ async function loadClimate() {
     // Alleen de woonkamer tonen; op naam zoeken omdat Tado de volgorde kan wijzigen
     const room = d.rooms?.find(x => x.name?.toLowerCase() === TADO_ROOM.toLowerCase()) || d.rooms?.[0];
     if (!room) throw new Error('geen ruimtes');
-    const heating = (d.boiler?.heating || 0) > 0;
+    const demand = Math.round(d.boiler?.heating || 0);
+    const level = heatLevel(demand);
 
     document.getElementById('cl-temp').textContent  = fmtTemp(room.temp) + '°';
-    document.getElementById('cl-icon').textContent  = room.openWindow ? '🪟' : heating ? '🔥' : '🌡️';
-    block.classList.toggle('heating', heating);
+    document.getElementById('cl-icon').textContent  = room.openWindow ? '🪟' : level ? '🔥' : '💤';
+    block.dataset.heat = level;
 
     // Ingestelde temperatuur + luchtvochtigheid
     const parts = [];
@@ -737,9 +746,9 @@ async function loadClimate() {
     if (room.humidity != null) parts.push('💧' + Math.round(room.humidity) + '%');
     document.getElementById('cl-desc').textContent = parts.join(' · ');
 
-    // Ketel, of een waarschuwing als de gegevens oud zijn / koppeling stuk is
+    // Warmtevraag, of een waarschuwing als de gegevens oud zijn / koppeling stuk is
     const ageMin = (Date.now() - new Date(d.updated).getTime()) / 60000;
-    let msg = heating ? `Ketel stookt ${Math.round(d.boiler.heating)}%` : 'Ketel in rust';
+    let msg = heatText(demand);
     let warn = false;
     if (d.error && d.errorAt && new Date(d.errorAt) > new Date(d.updated)) { msg = '⚠ ' + d.error; warn = true; }
     else if (ageMin > 60) { const u = new Date(d.updated); msg = `⚠ van ${pad(u.getHours())}:${pad(u.getMinutes())}`; warn = true; }
@@ -753,6 +762,14 @@ async function loadClimate() {
   }
 }
 setInterval(loadClimate, 2*60*1000);
+
+// Warmtevraag (hoogste van alle ruimtes) in niveaus. Onder 10% is het verschil met de
+// ingestelde temperatuur zo klein dat de ketel nauwelijks of niet brandt.
+function heatLevel(pct) { return pct >= 60 ? 3 : pct >= 30 ? 2 : pct >= 10 ? 1 : 0; }
+function heatText(pct) {
+  if (pct >= 10) return ['', 'Licht verwarmen', 'Verwarmt', 'Volop verwarmen'][heatLevel(pct)] + ' · ' + pct + '%';
+  return pct > 0 ? 'Bijna op temperatuur' : 'In rust';
+}
 
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
@@ -792,13 +809,14 @@ function renderClimatePanel() {
       sub.push(`⏱ ${morgen}${hhmm(t)} → ${x.next.power === 'OFF' ? 'uit' : fmtTemp(x.next.target) + '°'}`);
     }
     const pct = Math.round(x.heating || 0);
-    html += `<div class="cp-room${pct > 0 ? ' heating' : ''}">
+    const lvl = heatLevel(pct);
+    html += `<div class="cp-room${lvl ? ' heat-' + lvl : ''}">
       <div class="cp-name">${esc(x.name)}${badges ? `<span class="cp-badges">${esc(badges)}</span>` : ''}</div>
       <div class="cp-temp">${fmtTemp(x.temp)}°</div>
       <div class="cp-sub">${esc(sub.join('  ·  '))}</div>
       <div class="cp-bar">
         <div class="cp-track"><div class="cp-fill" style="width:${pct}%"></div></div>
-        <div class="cp-pct">${pct > 0 ? '🔥 vraagt ' + pct + '%' : 'geen warmtevraag'}</div>
+        <div class="cp-pct">${lvl ? '🔥 ' : ''}${heatText(pct)}${!lvl && pct > 0 ? ' (' + pct + '%)' : ''}</div>
       </div>
     </div>`;
   }
@@ -806,7 +824,7 @@ function renderClimatePanel() {
   const boiler = Math.round(d.boiler?.heating || 0);
   const left = /r=(\d+)/.exec(d.quota || '')?.[1];
   html += `<div class="cp-foot">
-    Ketel: <b>${boiler > 0 ? 'stookt (' + boiler + '%)' : 'in rust'}</b><br>
+    Warmtevraag huis: <b>${heatText(boiler)}</b><br>
     Bijgewerkt: <b>${hhmm(new Date(d.updated))}</b>${left ? ` · nog <b>${left}</b> Tado-verzoeken vandaag` : ''}
     ${d.error && d.errorAt && new Date(d.errorAt) > new Date(d.updated) ? `<br><span style="color:#f87171">⚠ ${esc(d.error)}</span>` : ''}
   </div>`;
