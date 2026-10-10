@@ -3,3 +3,6 @@ keuken-dashboard oud*.html
 *.cer
 *.pem
 *.mobileconfig
+
+# Lokale geheimen (bv. Tado Worker-wachtwoord)
+*secret*
