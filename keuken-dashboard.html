@@ -112,6 +112,51 @@
   #cl-extra { font-size: 12px; color: #a8998a; margin-top: 2px; white-space: nowrap; }
   #climate-block.heating #cl-extra { color: #fb923c; }
   #cl-extra.warn { color: #f87171 !important; }
+  #climate-block { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  #climate-block:active { transform: scale(0.98); }
+
+  /* Pop-up met alle ruimtes */
+  #climate-panel {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 190;
+    align-items: center; justify-content: center;
+  }
+  #climate-panel.open { display: flex; }
+  #climate-inner {
+    width: 560px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
+    padding: 20px 22px 18px;
+    border-radius: 28px;
+    background: linear-gradient(160deg, #2a1d14 0%, #1a1712 55%, #161a26 100%);
+    border: 1px solid rgba(251,146,60,0.4);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  #climate-inner h2 {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 17px; font-weight: 500; color: #ffe8cc; margin-bottom: 14px;
+  }
+  #cp-close { font-size: 20px; color: #a8998a; cursor: pointer; padding: 0 4px; }
+  .cp-banner {
+    background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.3);
+    color: #bfdbfe; border-radius: 12px; padding: 8px 12px; font-size: 13px; margin-bottom: 10px;
+  }
+  .cp-room {
+    display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center;
+    padding: 12px 14px; margin-bottom: 8px;
+    border-radius: 18px;
+    background: rgba(251,146,60,0.06); border: 1px solid rgba(251,146,60,0.18);
+  }
+  .cp-room.heating { border-color: rgba(251,146,60,0.55); background: rgba(251,146,60,0.11); }
+  .cp-name { font-size: 15px; font-weight: 500; color: #ffe8cc; }
+  .cp-badges { font-size: 12px; color: var(--warm); margin-left: 6px; }
+  .cp-temp { font-family: 'DM Mono', monospace; font-size: 30px; font-weight: 300; color: #ffe8cc; line-height: 1; grid-row: span 2; text-align: right; }
+  .cp-sub { font-size: 13px; color: #c9b8a6; }
+  .cp-bar { grid-column: 1 / 3; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+  .cp-track { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+  .cp-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #fbbf24, #fb923c); }
+  .cp-pct { font-size: 11px; font-family: 'DM Mono', monospace; color: #a8998a; min-width: 82px; text-align: right; }
+  .cp-room.heating .cp-pct { color: #fb923c; }
+  .cp-foot { font-size: 12px; color: #a8998a; margin-top: 10px; line-height: 1.6; font-family: 'DM Mono', monospace; }
+  .cp-foot b { color: #ffe8cc; font-weight: 400; }
   #weather-blocks {
     display: flex; gap: 10px; flex-shrink: 0;
   }
@@ -457,7 +502,7 @@
         <div id="time">--:--</div>
         <div id="date-str">laden…</div>
       </div>
-      <div id="climate-block" style="display:none">
+      <div id="climate-block" style="display:none" onclick="openClimate()">
         <div id="cl-icon">🌡️</div>
         <div>
           <div id="cl-label">🏠 Binnen</div>
@@ -539,6 +584,14 @@
     <span id="msg-clear" onclick="clearMessages()">wis</span>
   </div>
 
+</div>
+
+<!-- Binnenklimaat pop-up -->
+<div id="climate-panel" onclick="if (event.target === this) closeClimate()">
+  <div id="climate-inner">
+    <h2>🏠 Binnenklimaat <span id="cp-close" onclick="closeClimate()">✕</span></h2>
+    <div id="cp-body"></div>
+  </div>
 </div>
 
 <!-- Config knop -->
@@ -650,6 +703,7 @@ setInterval(updateClock, 1000);
 
 // ─── BINNENKLIMAAT (Tado X via Cloudflare Worker, zie tado-worker/) ──
 const TADO_ROOM = 'Woonkamer';
+let climateData = null, climateCloseTimer = null;
 function fmtTemp(v) { return v == null ? '--' : v.toFixed(1).replace('.', ','); }
 
 async function loadClimate() {
@@ -664,6 +718,8 @@ async function loadClimate() {
       .finally(() => clearTimeout(t));
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+    climateData = d;
+    if (document.getElementById('climate-panel').classList.contains('open')) renderClimatePanel();
 
     // Alleen de woonkamer tonen; op naam zoeken omdat Tado de volgorde kan wijzigen
     const room = d.rooms?.find(x => x.name?.toLowerCase() === TADO_ROOM.toLowerCase()) || d.rooms?.[0];
@@ -696,7 +752,66 @@ async function loadClimate() {
     extra.classList.add('warn');
   }
 }
-setInterval(loadClimate, 5*60*1000);
+setInterval(loadClimate, 2*60*1000);
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function hhmm(d) { return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+
+function openClimate() {
+  if (!climateData) return;
+  renderClimatePanel();
+  document.getElementById('climate-panel').classList.add('open');
+  // Keukenscherm: na een minuut vanzelf weer dicht
+  clearTimeout(climateCloseTimer);
+  climateCloseTimer = setTimeout(closeClimate, 60000);
+}
+function closeClimate() {
+  clearTimeout(climateCloseTimer);
+  document.getElementById('climate-panel').classList.remove('open');
+}
+
+function renderClimatePanel() {
+  const d = climateData;
+  const isMain = x => x.name?.toLowerCase() === TADO_ROOM.toLowerCase();
+  const rooms = [...(d.rooms || [])].sort((a, b) => isMain(b) - isMain(a) || a.name.localeCompare(b.name));
+  let html = '';
+
+  if (rooms.some(x => x.holiday)) html += '<div class="cp-banner">🧳 Vakantiestand staat aan</div>';
+  else if (rooms.some(x => x.away)) html += '<div class="cp-banner">🚶 Afwezig-stand: er is niemand thuis</div>';
+
+  for (const x of rooms) {
+    const badges = [x.boost && '🚀 boost', x.manual && '✋ handmatig', x.openWindow && '🪟 raam open', x.connected === false && '⚠ offline']
+      .filter(Boolean).join(' · ');
+    const sub = [];
+    if (x.power === 'OFF') sub.push('Uit');
+    else if (x.target != null) sub.push('→ ' + fmtTemp(x.target) + '°');
+    if (x.humidity != null) sub.push('💧 ' + Math.round(x.humidity) + '%');
+    if (x.next?.start) {
+      const t = new Date(x.next.start);
+      const morgen = t.toDateString() !== new Date().toDateString() ? 'morgen ' : '';
+      sub.push(`⏱ ${morgen}${hhmm(t)} → ${x.next.power === 'OFF' ? 'uit' : fmtTemp(x.next.target) + '°'}`);
+    }
+    const pct = Math.round(x.heating || 0);
+    html += `<div class="cp-room${pct > 0 ? ' heating' : ''}">
+      <div class="cp-name">${esc(x.name)}${badges ? `<span class="cp-badges">${esc(badges)}</span>` : ''}</div>
+      <div class="cp-temp">${fmtTemp(x.temp)}°</div>
+      <div class="cp-sub">${esc(sub.join('  ·  '))}</div>
+      <div class="cp-bar">
+        <div class="cp-track"><div class="cp-fill" style="width:${pct}%"></div></div>
+        <div class="cp-pct">${pct > 0 ? '🔥 vraagt ' + pct + '%' : 'geen warmtevraag'}</div>
+      </div>
+    </div>`;
+  }
+
+  const boiler = Math.round(d.boiler?.heating || 0);
+  const left = /r=(\d+)/.exec(d.quota || '')?.[1];
+  html += `<div class="cp-foot">
+    Ketel: <b>${boiler > 0 ? 'stookt (' + boiler + '%)' : 'in rust'}</b><br>
+    Bijgewerkt: <b>${hhmm(new Date(d.updated))}</b>${left ? ` · nog <b>${left}</b> Tado-verzoeken vandaag` : ''}
+    ${d.error && d.errorAt && new Date(d.errorAt) > new Date(d.updated) ? `<br><span style="color:#f87171">⚠ ${esc(d.error)}</span>` : ''}
+  </div>`;
+  document.getElementById('cp-body').innerHTML = html;
+}
 document.addEventListener('visibilitychange', () => { if (!document.hidden) loadClimate(); });
 
 // ─── WEER ────────────────────────────────────────────────────────────

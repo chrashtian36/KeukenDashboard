@@ -5,8 +5,8 @@ main = "worker.js"
 compatibility_date = "2026-09-01"
 
 [triggers]
-# Elke 20 minuten = 72 Tado-verzoeken per dag (limiet zonder Auto-Assist is ±100).
-crons = ["*/20 * * * *"]
+# Elke 5 minuten = 288 Tado-verzoeken per dag (dit account heeft een limiet van ±1000).
+crons = ["*/5 * * * *"]
 
 [[kv_namespaces]]
 binding = "TADO_KV"

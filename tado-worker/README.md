@@ -12,7 +12,7 @@ Het dashboard kan Tado niet rechtstreeks aanroepen, omdat Tado alleen verzoeken 
 5. Open in de Worker het tabblad **Settings** en stel daar in:
    - **Bindings → Add → KV namespace**: variabelenaam `TADO_KV`, kies de KV-opslag uit stap 2.
    - **Variables and Secrets → Add**: type *Secret*, naam `KEY`, waarde: zelfgekozen lang wachtwoord.
-   - **Trigger events → Add → Cron trigger**: `*/20 * * * *` (elke 20 minuten).
+   - **Trigger events → Add → Cron trigger**: `*/5 * * * *` (elke 5 minuten).
 6. Open `https://keuken-tado.<jouw-subdomein>.workers.dev/setup?key=<KEY>`. Log in bij Tado en bevestig de code.
    De pagina meldt "Gekoppeld!" en meteen daarna staan de eerste gegevens klaar.
 7. Ga op de iPad naar het dashboard → ⚙ en vul in:
@@ -22,8 +22,8 @@ Het dashboard kan Tado niet rechtstreeks aanroepen, omdat Tado alleen verzoeken 
 ## Goed om te weten
 
 - **Daglimiet:** Tado noemt ±100 verzoeken per dag zonder Auto-Assist, maar dit account kreeg er ±1000
-  (zie `quota` in de JSON: `r=` is wat er vandaag nog over is). Elke 20 minuten kost 72 per dag;
-  `*/5 * * * *` kost 288 en past dus ook.
+  (zie `quota` in de JSON: `r=` is wat er vandaag nog over is). Elke 5 minuten kost 288 per dag.
+  Zakt de limiet ooit naar 100, zet de cron dan op `*/20 * * * *` (72 per dag).
 - **Ketel:** Tado X heeft geen aparte ketelstatus. Het dashboard toont de hoogste stookvraag van alle ruimtes.
   Dat is wat de ketel op dat moment doet.
 - **Opnieuw koppelen:** blijft de Worker langer dan ongeveer 30 dagen uit, of wijzig je je Tado-wachtwoord,

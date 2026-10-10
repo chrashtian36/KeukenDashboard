@@ -2,7 +2,7 @@
 //
 // Waarom: de Tado-API laat alleen app.tado.com toe als herkomst (CORS), dus de
 // iPad kan niet rechtstreeks bij Tado. Deze Worker haalt de gegevens op via een
-// cron (elke 20 min, zie wrangler.toml / Triggers) en bewaart ze in KV. Het
+// cron (elke 5 min, zie wrangler.toml / Triggers) en bewaart ze in KV. Het
 // dashboard leest alleen die bewaarde JSON, zodat we ruim binnen de Tado-limiet
 // van ±100 verzoeken per dag blijven, hoe vaak het dashboard ook ververst.
 //
@@ -82,6 +82,13 @@ async function update(env) {
       boost: !!room.boostMode,
       openWindow: !!room.openWindow,
       connected: room.connection?.state ? room.connection.state === 'CONNECTED' : null,
+      away: !!room.awayMode,
+      holiday: !!room.holidayMode,
+      next: room.nextScheduleChange?.start ? {                // volgende wissel in het schema
+        start: room.nextScheduleChange.start,
+        power: room.nextScheduleChange.setting?.power ?? null,
+        target: room.nextScheduleChange.setting?.temperature?.value ?? null,
+      } : null,
     })),
     raw: rooms,
   };
