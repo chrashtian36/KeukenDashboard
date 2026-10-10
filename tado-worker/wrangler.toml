@@ -1,0 +1,13 @@
+# Alleen nodig als je via de command line uitrolt (npx wrangler deploy).
+# Via het Cloudflare-dashboard kun je dit bestand negeren; zie README.md.
+name = "keuken-tado"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+[triggers]
+# Elke 20 minuten = 72 Tado-verzoeken per dag (limiet zonder Auto-Assist is ±100).
+crons = ["*/20 * * * *"]
+
+[[kv_namespaces]]
+binding = "TADO_KV"
+id = "VUL_HIER_HET_KV_ID_IN"

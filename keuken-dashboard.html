@@ -84,6 +84,34 @@
     line-height: 1;
   }
   #date-str { font-size: 16px; color: #c0c8dc; margin-top: 5px; font-weight: 400; }
+  #clock-row { display: flex; align-items: center; gap: 16px; }
+  /* Binnen: pilvorm in warme tinten, bewust anders dan de rechthoekige blauwe weerblokken */
+  #climate-block {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 16px 7px 7px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(251,146,60,0.16) 0%, rgba(251,191,36,0.05) 100%);
+    border: 1px solid rgba(251,146,60,0.35);
+    transition: box-shadow 0.6s, border-color 0.6s;
+  }
+  #climate-block.heating { border-color: rgba(251,146,60,0.7); box-shadow: 0 0 18px rgba(251,146,60,0.25); }
+  #cl-icon {
+    width: 54px; height: 54px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; font-size: 26px;
+    background: rgba(251,146,60,0.14); border: 1px solid rgba(251,146,60,0.3);
+  }
+  #cl-label {
+    font-size: 10px; font-family: 'DM Mono', monospace;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: #fdba74; margin-bottom: 2px;
+  }
+  #cl-temp { font-family: 'DM Mono', monospace; font-size: 34px; font-weight: 300; color: #ffe8cc; line-height: 1; }
+  #cl-desc { font-size: 13px; color: #c9b8a6; margin-top: 3px; font-weight: 500; white-space: nowrap; }
+  #climate-block.heating #cl-desc { color: var(--warm); }
+  #cl-extra { font-size: 12px; color: #a8998a; margin-top: 2px; white-space: nowrap; }
+  #climate-block.heating #cl-extra { color: #fb923c; }
+  #cl-extra.warn { color: #f87171 !important; }
   #weather-blocks {
     display: flex; gap: 10px; flex-shrink: 0;
   }
@@ -424,9 +452,20 @@
 
   <!-- KLOK + WEER -->
   <div id="top">
-    <div id="clock-block">
-      <div id="time">--:--</div>
-      <div id="date-str">laden…</div>
+    <div id="clock-row">
+      <div id="clock-block">
+        <div id="time">--:--</div>
+        <div id="date-str">laden…</div>
+      </div>
+      <div id="climate-block" style="display:none">
+        <div id="cl-icon">🌡️</div>
+        <div>
+          <div id="cl-label">🏠 Binnen</div>
+          <div id="cl-temp">--°</div>
+          <div id="cl-desc"></div>
+          <div id="cl-extra"></div>
+        </div>
+      </div>
     </div>
     <div id="weather-blocks">
       <div class="weather-block" id="wb-now">
@@ -529,6 +568,14 @@
       <label>Philips Hue API Token</label>
       <input id="cfg-hue-token" type="text" placeholder="lange token" />
     </div>
+    <div class="cfg-row">
+      <label>Tado Worker URL</label>
+      <input id="cfg-tado-url" type="text" placeholder="https://keuken-tado.….workers.dev" />
+    </div>
+    <div class="cfg-row">
+      <label>Tado sleutel</label>
+      <input id="cfg-tado-key" type="text" placeholder="KEY uit de Worker" />
+    </div>
     <button class="cfg-save" onclick="saveConfig()">Opslaan &amp; herladen</button>
     <span class="cfg-cancel" onclick="closeConfig()">Annuleren</span>
     <span class="cfg-cancel" style="color:#f87171;margin-top:4px" onclick="if(confirm('Alle instellingen wissen?')){localStorage.clear();location.reload();}">Instellingen resetten</span>
@@ -570,6 +617,8 @@ function openConfig() {
   document.getElementById('cfg-ntfy').value      = cfg.ntfy     || '';
   document.getElementById('cfg-hue-ip').value    = cfg.hueIp    || '';
   document.getElementById('cfg-hue-token').value = cfg.hueToken || '';
+  document.getElementById('cfg-tado-url').value  = cfg.tadoUrl  || '';
+  document.getElementById('cfg-tado-key').value  = cfg.tadoKey  || '';
   document.getElementById('config-panel').classList.add('open');
 }
 function closeConfig() { document.getElementById('config-panel').classList.remove('open'); }
@@ -579,6 +628,8 @@ function saveConfig() {
   cfg.ntfy     = document.getElementById('cfg-ntfy').value.trim();
   cfg.hueIp    = document.getElementById('cfg-hue-ip').value.trim();
   cfg.hueToken = document.getElementById('cfg-hue-token').value.trim();
+  cfg.tadoUrl  = document.getElementById('cfg-tado-url').value.trim().replace(/\/+$/, '');
+  cfg.tadoKey  = document.getElementById('cfg-tado-key').value.trim();
   saveLocalCfg();
   closeConfig();
   initAll();
@@ -596,6 +647,57 @@ function updateClock() {
 }
 updateClock();
 setInterval(updateClock, 1000);
+
+// ─── BINNENKLIMAAT (Tado X via Cloudflare Worker, zie tado-worker/) ──
+const TADO_ROOM = 'Woonkamer';
+function fmtTemp(v) { return v == null ? '--' : v.toFixed(1).replace('.', ','); }
+
+async function loadClimate() {
+  const block = document.getElementById('climate-block');
+  if (!cfg.tadoUrl || !cfg.tadoKey) { block.style.display = 'none'; return; }
+  block.style.display = '';
+  const extra = document.getElementById('cl-extra');
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 10000);
+    const r = await fetch(`${cfg.tadoUrl}/?key=${encodeURIComponent(cfg.tadoKey)}`, { signal: ctrl.signal, cache: 'no-store' })
+      .finally(() => clearTimeout(t));
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || 'HTTP ' + r.status);
+
+    // Alleen de woonkamer tonen; op naam zoeken omdat Tado de volgorde kan wijzigen
+    const room = d.rooms?.find(x => x.name?.toLowerCase() === TADO_ROOM.toLowerCase()) || d.rooms?.[0];
+    if (!room) throw new Error('geen ruimtes');
+    const heating = (d.boiler?.heating || 0) > 0;
+
+    document.getElementById('cl-temp').textContent  = fmtTemp(room.temp) + '°';
+    document.getElementById('cl-icon').textContent  = room.openWindow ? '🪟' : heating ? '🔥' : '🌡️';
+    block.classList.toggle('heating', heating);
+
+    // Ingestelde temperatuur + luchtvochtigheid
+    const parts = [];
+    if (room.power === 'OFF') parts.push('Uit');
+    else if (room.target != null) parts.push('→ ' + fmtTemp(room.target) + '°' + (room.boost ? ' boost' : room.manual ? ' ✋' : ''));
+    if (room.humidity != null) parts.push('💧' + Math.round(room.humidity) + '%');
+    document.getElementById('cl-desc').textContent = parts.join(' · ');
+
+    // Ketel, of een waarschuwing als de gegevens oud zijn / koppeling stuk is
+    const ageMin = (Date.now() - new Date(d.updated).getTime()) / 60000;
+    let msg = heating ? `Ketel stookt ${Math.round(d.boiler.heating)}%` : 'Ketel in rust';
+    let warn = false;
+    if (d.error && d.errorAt && new Date(d.errorAt) > new Date(d.updated)) { msg = '⚠ ' + d.error; warn = true; }
+    else if (ageMin > 60) { const u = new Date(d.updated); msg = `⚠ van ${pad(u.getHours())}:${pad(u.getMinutes())}`; warn = true; }
+    extra.textContent = msg;
+    extra.classList.toggle('warn', warn);
+    extra.title = warn ? msg : '';
+  } catch (e) {
+    console.warn('Tado-fout:', e);
+    extra.textContent = '⚠ Tado: ' + (e?.name === 'AbortError' ? 'time-out' : e?.message || 'fout');
+    extra.classList.add('warn');
+  }
+}
+setInterval(loadClimate, 5*60*1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) loadClimate(); });
 
 // ─── WEER ────────────────────────────────────────────────────────────
 const weatherIcons = {
@@ -1478,7 +1580,7 @@ async function loadAgenda() {
 // ─── INIT ────────────────────────────────────────────────────────────
 async function initAll() {
   loadDailyQuote();
-  buildLights(); startNtfy(); loadWeather(); loadAgenda();
+  buildLights(); startNtfy(); loadWeather(); loadAgenda(); loadClimate();
 }
 initAll();
 setInterval(loadWeather, 10*60*1000);
