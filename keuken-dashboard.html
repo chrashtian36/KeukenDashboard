@@ -222,6 +222,74 @@
   .rbar:hover .rbar-tip { display: block; }
   #radar-times { display: flex; justify-content: space-between; margin-top: 4px; font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); }
   #radar-status { font-size: 13px; font-weight: 500; }
+  #radar-card, #wb-today, #wb-tomorrow { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  #radar-card:active, #wb-today:active, #wb-tomorrow:active { transform: scale(0.99); }
+
+  /* ── WEER- EN REGEN-POP-UP ── */
+  #wx-panel {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7); z-index: 190;
+    align-items: center; justify-content: center;
+  }
+  #wx-panel.open { display: flex; }
+  #wx-inner {
+    width: 760px; max-width: 94vw; max-height: 90vh; overflow-y: auto;
+    padding: 20px 22px 18px; border-radius: 28px;
+    background: linear-gradient(160deg, #13203a 0%, #111827 60%, #161a26 100%);
+    border: 1px solid rgba(96,165,250,0.4);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  }
+  #wx-inner h2 {
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 17px; font-weight: 500; color: #dbeafe; margin-bottom: 12px;
+  }
+  #wx-close { font-size: 20px; color: var(--muted); cursor: pointer; padding: 0 4px; }
+  .wx-tabs { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  .wx-tab {
+    font-size: 13px; padding: 6px 12px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--border); color: var(--muted); background: rgba(255,255,255,0.03);
+  }
+  .wx-tab.on { color: #fff; background: rgba(96,165,250,0.22); border-color: rgba(96,165,250,0.6); }
+  .wx-sec { font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--rain); margin: 14px 0 8px; }
+  .wx-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+  .wx-stat { background: rgba(255,255,255,0.04); border: 1px solid var(--border); border-radius: 12px; padding: 8px 10px; }
+  .wx-stat .k { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .wx-stat .v { font-size: 18px; color: #fff; margin-top: 2px; }
+  .wx-hours { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; }
+  .wx-hour {
+    flex: 0 0 62px; text-align: center; padding: 8px 4px; border-radius: 12px;
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+  }
+  .wx-hour .i { font-size: 22px; margin: 4px 0; }
+  .wx-hour .t { font-size: 16px; color: #fff; }
+  .wx-hour .p { color: var(--rain); margin-top: 3px; }
+  .wx-days { display: flex; flex-direction: column; gap: 6px; }
+  .wx-day {
+    display: grid; grid-template-columns: 92px 34px 1fr 120px; align-items: center; gap: 10px;
+    padding: 7px 12px; border-radius: 12px; cursor: pointer;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border); font-size: 14px;
+  }
+  .wx-day.on { border-color: rgba(96,165,250,0.6); background: rgba(96,165,250,0.1); }
+  .wx-day .n { color: #fff; }
+  .wx-day .i { font-size: 22px; text-align: center; }
+  .wx-day .r { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--rain); text-align: right; }
+  .wx-range { position: relative; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); }
+  .wx-range span { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(90deg, #60a5fa, #fbbf24); }
+  .wx-range-lbl { display: flex; justify-content: space-between; font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 3px; }
+  /* staafgrafiek neerslag */
+  .wx-chart { display: flex; align-items: flex-end; gap: 2px; height: 110px; position: relative; border-bottom: 1px solid var(--border); }
+  .wx-col { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; position: relative; min-width: 0; }
+  .wx-bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; }
+  .wx-prob { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(96,165,250,0.12); border-top: 1px dashed rgba(96,165,250,0.45); pointer-events: none; }
+  .wx-col.night { background: rgba(0,0,0,0.18); }
+  .wx-col .mm { font-family: 'DM Mono', monospace; font-size: 9px; color: #bfdbfe; margin-bottom: 2px; white-space: nowrap; }
+  .wx-axis { display: flex; gap: 2px; margin-top: 4px; }
+  .wx-axis span { flex: 1; font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-align: center; min-width: 0; overflow: visible; white-space: nowrap; }
+  .wx-scroll { overflow-x: auto; padding-bottom: 4px; }
+  .wx-note { font-size: 12px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+  .wx-legend { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; }
+  .wx-legend i { display: inline-block; width: 12px; height: 8px; border-radius: 2px; }
 
   /* ── AGENDA ── */
   #agenda-card {
@@ -538,7 +606,7 @@
           <div class="wb-extra" id="wb-now-extra"></div>
         </div>
       </div>
-      <div class="weather-block" id="wb-today">
+      <div class="weather-block" id="wb-today" onclick="openWeather(0)">
         <div class="wb-icon" id="wb-today-icon">☁️</div>
         <div class="wb-right">
           <div class="wb-label">Vandaag</div>
@@ -547,7 +615,7 @@
           <div class="wb-extra" id="wb-today-extra"></div>
         </div>
       </div>
-      <div class="weather-block" id="wb-tomorrow">
+      <div class="weather-block" id="wb-tomorrow" onclick="openWeather(1)">
         <div class="wb-icon" id="wb-tomorrow-icon">☁️</div>
         <div class="wb-right">
           <div class="wb-label">Morgen</div>
@@ -560,7 +628,7 @@
   </div>
 
   <!-- RADAR -->
-  <div class="card" id="radar-card">
+  <div class="card" id="radar-card" onclick="openRain()">
     <div style="display:flex;align-items:center;justify-content:space-between">
       <div class="label" style="margin-bottom:0;color:var(--rain)" id="radar-label">Neerslag komend uur</div>
       <div id="radar-status">laden…</div>
@@ -612,6 +680,14 @@
       </span>
     </h2>
     <div id="cp-body"></div>
+  </div>
+</div>
+
+<!-- Weer / regen pop-up -->
+<div id="wx-panel" onclick="if (event.target === this) closeWx()">
+  <div id="wx-inner">
+    <h2><span id="wx-title">Weer</span><span id="wx-close" onclick="closeWx()">✕</span></h2>
+    <div id="wx-body"></div>
   </div>
 </div>
 
@@ -877,14 +953,15 @@ const weatherIcons = {
   0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',
   51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',
   71:'❄️',73:'❄️',75:'❄️',80:'🌦️',81:'🌧️',82:'⛈️',
-  95:'⛈️',96:'⛈️',99:'⛈️'
+  95:'⛈️',96:'⛈️',99:'⛈️',56:'🌧️',57:'🌧️',66:'🌧️',67:'🌧️',77:'🌨️',85:'🌨️',86:'🌨️'
 };
 const weatherDesc = {
   0:'Helder',1:'Licht bewolkt',2:'Gedeeltelijk bewolkt',3:'Bewolkt',
   45:'Mist',48:'Mist',51:'Lichte motregen',53:'Motregen',55:'Zware motregen',
   61:'Lichte regen',63:'Regen',65:'Zware regen',71:'Lichte sneeuw',73:'Sneeuw',
   75:'Zware sneeuw',80:'Regenbuien',81:'Regenbuien',82:'Zware buien',
-  95:'Onweer',96:'Onweer',99:'Zwaar onweer'
+  95:'Onweer',96:'Onweer met hagel',99:'Zwaar onweer',56:'IJzel',57:'IJzel',66:'IJzel',67:'IJzel',
+  77:'Sneeuwkorrels',85:'Sneeuwbuien',86:'Zware sneeuwbuien'
 };
 
 async function loadWeather() {
@@ -896,8 +973,14 @@ async function loadWeather() {
     const { latitude: lat, longitude: lon, name: cityName } = gd.results[0];
     const lbl = document.getElementById('radar-label');
     if (lbl) lbl.textContent = `Neerslag komende 6 uur · ${cityName}`;
-    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m&hourly=precipitation&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,precipitation_sum&timezone=Europe%2FAmsterdam&forecast_days=2`);
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weathercode,windspeed_10m,relativehumidity_2m`
+      + `&hourly=precipitation,precipitation_probability,temperature_2m,apparent_temperature,weathercode,windspeed_10m,windgusts_10m,winddirection_10m,is_day`
+      + `&minutely_15=precipitation`
+      + `&daily=weathercode,temperature_2m_max,temperature_2m_min,windspeed_10m_max,windgusts_10m_max,winddirection_10m_dominant,precipitation_sum,precipitation_probability_max,precipitation_hours,sunrise,sunset,uv_index_max`
+      + `&timezone=Europe%2FAmsterdam&forecast_days=14`);
     const d = await r.json();
+    wxData = d; wxCity = cityName;
+    if (document.getElementById('wx-panel').classList.contains('open')) renderWx();
 
     // ── Blok 1: Nu ──
     const c = d.current, code = c.weathercode;
@@ -992,6 +1075,197 @@ function buildRadar(hourly) {
     st.textContent = '✓ droog';
     st.style.color = 'var(--accent2)';
   }
+}
+
+// ─── WEER- EN REGEN-POP-UP ───────────────────────────────────────────
+let wxData = null, wxCity = '', wxMode = 'day', wxDay = 1, wxCloseTimer;
+const DAGEN = ['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'];
+const MAANDEN = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+const WINDRICHTING = ['N','NO','O','ZO','Z','ZW','W','NW'];
+function windDir(deg) { return deg == null ? '' : WINDRICHTING[Math.round(deg / 45) % 8]; }
+function bft(kmh) { const g = [1,6,12,20,29,39,50,62,75,89,103,118]; let b = 0; while (b < g.length && kmh >= g[b]) b++; return b; }
+function dayName(i) {
+  if (i === 0) return 'Vandaag'; if (i === 1) return 'Morgen';
+  const d = new Date(wxData.daily.time[i] + 'T12:00');
+  return DAGEN[d.getDay()].replace(/^./, c => c.toUpperCase());
+}
+function dayDate(i) { const d = new Date(wxData.daily.time[i] + 'T12:00'); return d.getDate() + ' ' + MAANDEN[d.getMonth()]; }
+function wxIcon(code, isDay) { return (isDay === 0 && (code === 0 || code === 1)) ? '🌙' : (weatherIcons[code] || '🌡️'); }
+function rainColor(p) { return p > 2 ? '#3b82f6' : p > 0.5 ? '#4f8ef7' : p > 0.1 ? '#67b2fa' : '#2d3748'; }
+function niceMax(v) { return [0.5,1,2,3,5,8,10,15,20,30,50].find(s => s >= v) || Math.ceil(v); }
+
+function openWeather(i) { wxMode = 'day'; wxDay = i; showWx(); }
+function openRain()     { wxMode = 'rain'; showWx(); }
+function showWx() {
+  if (wxData) renderWx();
+  else {
+    // Nog geen weerdata (geen verbinding): laat dat zien in plaats van niets te doen
+    document.getElementById('wx-title').textContent = wxMode === 'rain' ? '🌧 Neerslag' : '🌤 Weer';
+    document.getElementById('wx-body').innerHTML = '<div class="cp-banner">Er is nog geen weerdata binnen. Controleer de internetverbinding; het dashboard probeert het elke 10 minuten opnieuw.</div>';
+    loadWeather();
+  }
+  document.getElementById('wx-panel').classList.add('open');
+  document.getElementById('wx-inner').scrollTop = 0;
+  bumpWxTimer();
+}
+function bumpWxTimer() { clearTimeout(wxCloseTimer); wxCloseTimer = setTimeout(closeWx, 120000); } // keukenscherm: na 2 min vanzelf dicht
+function closeWx() { clearTimeout(wxCloseTimer); document.getElementById('wx-panel').classList.remove('open'); }
+function wxSet(mode, day) { wxMode = mode; if (day != null) wxDay = day; renderWx(); bumpWxTimer(); }
+
+function renderWx() {
+  const tabs = `<div class="wx-tabs">
+    <span class="wx-tab${wxMode === 'day' ? ' on' : ''}" onclick="wxSet('day')">🌤 Weer per dag</span>
+    <span class="wx-tab${wxMode === 'rain' ? ' on' : ''}" onclick="wxSet('rain')">🌧 Neerslag</span>
+  </div>`;
+  document.getElementById('wx-body').innerHTML = tabs + (wxMode === 'rain' ? rainHtml() : dayHtml());
+  document.getElementById('wx-title').textContent = wxMode === 'rain'
+    ? `🌧 Neerslag · ${wxCity}`
+    : `${weatherIcons[wxData.daily.weathercode[wxDay]] || '🌡️'} ${dayName(wxDay)} ${dayDate(wxDay)} · ${wxCity}`;
+  // horizontale grafieken beginnen bij 'nu'
+  document.querySelectorAll('#wx-body .wx-scroll').forEach(el => el.scrollLeft = 0);
+}
+
+// Uren (index in hourly) die bij een dag horen
+function hoursOfDay(i) {
+  const date = wxData.daily.time[i], h = wxData.hourly, out = [];
+  h.time.forEach((t, k) => { if (t.startsWith(date)) out.push(k); });
+  return out;
+}
+
+function dayHtml() {
+  const d = wxData.daily, h = wxData.hourly, i = wxDay;
+  const hrs = hoursOfDay(i);
+  const feels = hrs.map(k => h.apparent_temperature[k]).filter(v => v != null);
+  const sr = d.sunrise[i]?.slice(11, 16), ss = d.sunset[i]?.slice(11, 16);
+  const rainMm = d.precipitation_sum[i] || 0;
+  const stat = (k, v) => `<div class="wx-stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+
+  let html = `<div class="wx-summary">
+    ${stat('Max / min', `${Math.round(d.temperature_2m_max[i])}° / ${Math.round(d.temperature_2m_min[i])}°`)}
+    ${feels.length ? stat('Voelt als', `${Math.round(Math.min(...feels))}° – ${Math.round(Math.max(...feels))}°`) : ''}
+    ${stat('Neerslag', rainMm > 0 ? `${rainMm.toFixed(1)} mm` : 'droog')}
+    ${stat('Kans op regen', (d.precipitation_probability_max[i] ?? '–') + '%')}
+    ${stat('Wind', `${windDir(d.winddirection_10m_dominant[i])} ${bft(d.windspeed_10m_max[i])} Bft`)}
+    ${stat('Windstoten', `${Math.round(d.windgusts_10m_max[i])} km/u`)}
+    ${stat('Zon', `🌅 ${sr} · 🌇 ${ss}`)}
+    ${d.uv_index_max[i] != null ? stat('UV max', Math.round(d.uv_index_max[i])) : ''}
+  </div>`;
+
+  // Per uur (vandaag vanaf nu)
+  const nowMs = Date.now() - 3600000;
+  const shown = hrs.filter(k => new Date(h.time[k]).getTime() >= nowMs);
+  if (shown.length) {
+    html += `<div class="wx-sec">Per uur</div><div class="wx-hours wx-scroll">` + shown.map(k => {
+      const p = h.precipitation[k], pp = h.precipitation_probability[k];
+      return `<div class="wx-hour">
+        <div>${h.time[k].slice(11, 16)}</div>
+        <div class="i">${wxIcon(h.weathercode[k], h.is_day[k])}</div>
+        <div class="t">${Math.round(h.temperature_2m[k])}°</div>
+        <div class="p">${p > 0.05 ? p.toFixed(1) + ' mm' : '&nbsp;'}</div>
+        <div class="p" style="opacity:.75">${pp != null ? pp + '%' : ''}</div>
+        <div style="margin-top:3px">${windDir(h.winddirection_10m[k])} ${bft(h.windspeed_10m[k])}</div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  // Twee weken vooruit
+  const lo = Math.min(...d.temperature_2m_min), hi = Math.max(...d.temperature_2m_max), span = Math.max(1, hi - lo);
+  html += `<div class="wx-sec">Komende ${d.time.length} dagen <span style="text-transform:none;letter-spacing:0;color:var(--muted)">· tik op een dag</span></div><div class="wx-days">`;
+  d.time.forEach((_, j) => {
+    const a = (d.temperature_2m_min[j] - lo) / span * 100, b = (d.temperature_2m_max[j] - lo) / span * 100;
+    const r = d.precipitation_sum[j] || 0;
+    html += `<div class="wx-day${j === i ? ' on' : ''}" onclick="wxSet('day', ${j})">
+      <div class="n">${dayName(j)}<div style="font-size:11px;color:var(--muted)">${dayDate(j)}</div></div>
+      <div class="i">${weatherIcons[d.weathercode[j]] || '🌡️'}</div>
+      <div><div class="wx-range"><span style="left:${a}%;width:${Math.max(3, b - a)}%"></span></div>
+        <div class="wx-range-lbl"><span>${Math.round(d.temperature_2m_min[j])}°</span><span style="color:#fff">${Math.round(d.temperature_2m_max[j])}°</span></div></div>
+      <div class="r">${r > 0.05 ? `🌧 ${r.toFixed(1)} mm` : '☀️ droog'}<br><span style="opacity:.7">${d.precipitation_probability_max[j] ?? '–'}%</span></div>
+    </div>`;
+  });
+  html += `</div>`;
+  if (d.time.length > 7) html += `<div class="wx-note">Verder dan een week vooruit is de verwachting een stuk onzekerder.</div>`;
+  return html;
+}
+
+// Staafgrafiek: items = [{label, p, prob, night, day}]
+function rainChart(items, colWidth) {
+  const max = niceMax(Math.max(0.5, ...items.map(x => x.p)));
+  const w = colWidth ? `style="width:${items.length * (colWidth + 2)}px"` : '';
+  let bars = '', axis = '';
+  items.forEach(x => {
+    const hPct = Math.min(100, x.p / max * 100);
+    bars += `<div class="wx-col${x.night ? ' night' : ''}">
+      ${x.prob != null ? `<div class="wx-prob" style="height:${x.prob}%"></div>` : ''}
+      ${x.p >= 0.1 ? `<div class="mm">${x.p < 10 ? x.p.toFixed(1) : Math.round(x.p)}</div>` : ''}
+      <div class="wx-bar" style="height:${Math.max(2, hPct)}%;background:${rainColor(x.p)};opacity:${x.p > 0 ? 0.95 : 0.3}"></div>
+    </div>`;
+    axis += `<span>${x.label || ''}</span>`;
+  });
+  return `<div ${w}><div class="wx-chart">${bars}</div><div class="wx-axis">${axis}</div></div>`;
+}
+
+function rainHtml() {
+  const h = wxData.hourly, d = wxData.daily, m = wxData.minutely_15;
+  const now = Date.now();
+  let html = '';
+
+  // Samenvatting: wanneer de volgende bui / wanneer het weer droog wordt
+  const fut = h.time.map((t, k) => ({ t: new Date(t), p: h.precipitation[k] })).filter(x => x.t.getTime() >= now - 3600000);
+  const when = x => {
+    const days = Math.round((new Date(x.t).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000);
+    const dl = days === 0 ? 'vandaag' : days === 1 ? 'morgen' : DAGEN[x.t.getDay()];
+    return `${dl} ${hhmm(x.t)}`;
+  };
+  let summary;
+  if (fut.length && fut[0].p >= 0.1) {
+    const dry = fut.find(x => x.p < 0.1);
+    summary = dry ? `🌧 Het regent nu; droog vanaf ongeveer <b>${when(dry)}</b>` : '🌧 Het blijft voorlopig nat';
+  } else {
+    const wet = fut.find(x => x.p >= 0.1);
+    summary = wet ? `✓ Nu droog; eerstvolgende regen rond <b>${when(wet)}</b> (${wet.p.toFixed(1)} mm/u)` : `✓ Droog in de komende ${Math.round(fut.length / 24)} dagen`;
+  }
+  html += `<div class="cp-banner">${summary}</div>`;
+
+  // 1. Per kwartier, komende 3 uur
+  if (m?.time && m.precipitation) {
+    const q = m.time.map((t, k) => ({ t: new Date(t), p: m.precipitation[k] }))
+      .filter(x => x.p != null && x.t.getTime() >= now - 15 * 60000).slice(0, 12);
+    if (q.length) {
+      const tot = q.reduce((s, x) => s + x.p, 0);
+      html += `<div class="wx-sec">Komende 3 uur · per kwartier <span style="text-transform:none;letter-spacing:0;color:var(--muted)">· ${tot >= 0.1 ? tot.toFixed(1) + ' mm' : 'droog'}</span></div>`;
+      html += rainChart(q.map((x, k) => ({ p: x.p, label: k % 2 === 0 ? hhmm(x.t) : '' })));
+    }
+  }
+
+  // 2. Per uur, komende 48 uur (scrollbaar)
+  const hrs = h.time.map((t, k) => ({ t: new Date(t), k })).filter(x => x.t.getTime() >= now - 3600000).slice(0, 48);
+  const tot48 = hrs.reduce((s, x) => s + (h.precipitation[x.k] || 0), 0);
+  html += `<div class="wx-sec">Komende 48 uur · per uur <span style="text-transform:none;letter-spacing:0;color:var(--muted)">· ${tot48.toFixed(1)} mm</span></div>`;
+  html += `<div class="wx-scroll">` + rainChart(hrs.map(x => ({
+    p: h.precipitation[x.k] || 0,
+    prob: h.precipitation_probability[x.k],
+    night: h.is_day[x.k] === 0,
+    label: x.t.getHours() === 0 ? DAGEN[x.t.getDay()].slice(0, 2) : x.t.getHours() % 3 === 0 ? pad(x.t.getHours()) : ''
+  })), 22) + `</div>`;
+  html += `<div class="wx-note"><span class="wx-legend"><i style="background:#4f8ef7"></i>mm per uur</span><span class="wx-legend"><i style="background:rgba(96,165,250,0.25);border-top:1px dashed #60a5fa"></i>kans op regen</span><span class="wx-legend"><i style="background:rgba(0,0,0,0.35)"></i>nacht</span></div>`;
+
+  // 3. Per dag, komende 14 dagen
+  html += `<div class="wx-sec">Komende ${d.time.length} dagen · per dag</div>`;
+  html += rainChart(d.time.map((_, j) => ({
+    p: d.precipitation_sum[j] || 0,
+    prob: d.precipitation_probability_max[j],
+    label: j === 0 ? 'nu' : DAGEN[new Date(d.time[j] + 'T12:00').getDay()].slice(0, 2)
+  })));
+  html += `<div class="wx-note">Totaal komende week: <b style="color:#fff">${d.precipitation_sum.slice(0, 7).reduce((s, v) => s + (v || 0), 0).toFixed(1)} mm</b>, regen op ${d.precipitation_sum.slice(0, 7).filter(v => v >= 0.2).length} van de 7 dagen. Tik op een dag hieronder voor details.</div>`;
+  html += `<div class="wx-days" style="margin-top:8px">` + d.time.slice(0, 7).map((_, j) => {
+    const r = d.precipitation_sum[j] || 0;
+    return `<div class="wx-day" style="grid-template-columns:92px 34px 1fr 120px" onclick="wxSet('day', ${j})">
+      <div class="n">${dayName(j)}</div><div class="i">${weatherIcons[d.weathercode[j]] || '🌡️'}</div>
+      <div style="font-size:12px;color:var(--muted)">${d.precipitation_hours[j] ? Math.round(d.precipitation_hours[j]) + ' uur nat' : 'geen regen'}</div>
+      <div class="r">${r > 0.05 ? r.toFixed(1) + ' mm' : 'droog'} · ${d.precipitation_probability_max[j] ?? '–'}%</div>
+    </div>`;
+  }).join('') + `</div>`;
+  return html;
 }
 
 // ─── LICHTEN (Philips Hue) ───────────────────────────────────────────
@@ -1311,14 +1585,37 @@ const QUOTE_FALLBACKS = [
   { text: 'Hoe meer ik lees, hoe meer ik weet. Hoe meer ik weet, hoe meer ik vergeet. Hoe meer ik vergeet, hoe minder ik weet.', author: 'Nederlandse volkswijsheid' },
 ];
 
-let dailyQuote = null;
+// Catalaanse gezegden voor specifieke dagen (gaan vóór de gewone rotatie)
+const DATED_QUOTES = {
+  '2026-11-21': { text: 'A poc a poc s\'arriba lluny.', author: 'Catalaans gezegde', tl: 'Stapje voor stapje kom je ver.' },
+  '2026-11-22': { text: 'De mica en mica s\'omple la pica.', author: 'Catalaans gezegde', tl: 'Beetje bij beetje loopt de gootsteen vol.' },
+  '2026-11-23': { text: 'Qui matina, fa farina.', author: 'Catalaans gezegde', tl: 'Wie vroeg opstaat, maalt meel — de ochtendstond heeft goud in de mond.' },
+  '2026-11-24': { text: 'Qui no s\'arrisca, no pisca.', author: 'Catalaans gezegde', tl: 'Wie niet waagt, die niet wint.' },
+  '2026-11-25': { text: 'Per Santa Caterina, el fred camina.', author: 'Catalaans gezegde', tl: 'Met Sint-Catharina (25 nov) komt de kou eraan.' },
+  '2026-11-26': { text: 'Més val un ocell a la mà que cent volant.', author: 'Catalaans gezegde', tl: 'Beter één vogel in de hand dan honderd in de lucht.' },
+  '2026-11-27': { text: 'No diguis blat fins que no sigui al sac i ben lligat.', author: 'Catalaans gezegde', tl: 'Zeg geen "graan" voordat het in de zak zit en goed dichtgebonden is.' },
+  '2026-11-28': { text: 'Qui té un amic, té un tresor.', author: 'Catalaans gezegde', tl: 'Wie een vriend heeft, heeft een schat.' },
+  '2026-11-29': { text: 'Bon cop de falç, defensors de la terra!', author: 'Els Segadors (1899)', tl: 'Een flinke slag met de sikkel, verdedigers van het land!' },
+  '2026-11-30': { text: 'Som i serem gent catalana, tant si es vol com si no es vol.', author: 'La Santa Espina (1907)', tl: 'We zijn en blijven Catalanen, of men het nu wil of niet.' },
+  '2026-12-01': { text: 'A vint-i-cinc de desembre, fum, fum, fum.', author: 'Catalaans kerstlied', tl: 'Op vijfentwintig december, fum, fum, fum.' },
+  '2026-12-02': { text: 'Què li darem a n\'el Noi de la Mare?', author: 'Catalaans kerstlied', tl: 'Wat zullen we het Kindje van de Moeder geven?' },
+  '2026-12-03': { text: 'Més val tard que mai.', author: 'Catalaans gezegde', tl: 'Beter laat dan nooit.' },
+};
+
+let dailyQuote = null, dailyQuoteKey = '';
 
 function loadDailyQuote() {
   const now = new Date();
+  const key = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  if (key === dailyQuoteKey) return false;
+  dailyQuoteKey = key;
   const start = new Date(now.getFullYear(), 0, 0);
   const dayOfYear = Math.floor((now - start) / 86400000);
-  dailyQuote = QUOTE_FALLBACKS[dayOfYear % QUOTE_FALLBACKS.length];
+  dailyQuote = DATED_QUOTES[key] || QUOTE_FALLBACKS[dayOfYear % QUOTE_FALLBACKS.length];
+  return true;
 }
+// Het scherm staat dag en nacht aan: na middernacht de nieuwe spreuk laten zien
+setInterval(() => { if (loadDailyQuote()) renderTicker(); }, 60000);
 
 // ─── MELDINGEN (ticker) ─────────────────────────────────────────────
 let messages = JSON.parse(localStorage.getItem('dashboard_msgs') || '[]');
